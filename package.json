@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "displayName": "NX-595E Homebridge Plugin",
   "name": "homebridge-nx-595e",
   "version": "1.0.0",
@@ -7,10 +7,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "git://github.com/flareman/homebridge-nx-595e.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/flareman/homebridge-nx-595e/issues"
   },
   "engines": {
     "node": ">=10.17.0",
