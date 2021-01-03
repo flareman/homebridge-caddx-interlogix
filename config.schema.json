@@ -1,0 +1,48 @@
+{
+  "pluginAlias": "NX-595E",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "NX-595E Security System Platform"
+      },
+      "username" : {
+        "title": "Username"
+        "type": "string",
+        "required": true,
+        "description": "The alarm panel username to be used"
+      },
+      "pin" : {
+        "title": "PIN code"
+        "type": "string",
+        "required": true,
+        "minLength": 4,
+        "maxLength": 4,
+        "pattern": "^[0-9]+$",
+        "description": "The PIN code for the username specified"
+      },
+      "ip" : {
+        "title": "IP address"
+        "type": "string",
+        "required": true,
+        "format": "ipv4",
+        "description": "The alarm panel IP address (should be set as static)"
+      },
+      "pollTimer" : {
+        "title": "Poll delay (in ms)"
+        "type": "integer",
+        "required": false,
+        "placeholder": 500,
+        "default": 500,
+        "minimum": 100,
+        "maximum": 5000,
+        "description": "Delay in ms between poll requests to the panel for status updates"
+      }
+    }
+  }
+}

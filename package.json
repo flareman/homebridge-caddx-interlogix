@@ -1,0 +1,54 @@
+{
+  "private": true,
+  "displayName": "NX-595E Homebridge Plugin",
+  "name": "homebridge-nx-595e",
+  "version": "1.0.0",
+  "description": "A homebridge plugin for integrating the ComNav/NetworX/CaddX NX-595E network module with HomeKit.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+  },
+  "bugs": {
+    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+  },
+  "engines": {
+    "node": ">=10.17.0",
+    "homebridge": ">=1.0.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts --max-warnings=0",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "caddx",
+    "comnav",
+    "595",
+    "nx595",
+    "nx-595",
+    "nx595e",
+    "nx-595e",
+    "alarm",
+    "security system"
+  ],
+  "devDependencies": {
+    "@types/node": "^14.14.6",
+    "@typescript-eslint/eslint-plugin": "^4.6.1",
+    "@typescript-eslint/parser": "^4.6.1",
+    "eslint": "^7.13.0",
+    "homebridge": "^1.2.3",
+    "nodemon": "^2.0.6",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.5"
+  },
+  "dependencies": {
+    "@types/superagent": "^4.1.10",
+    "fast-xml-parser": "^3.17.6",
+    "superagent": "^6.1.0"
+  }
+}

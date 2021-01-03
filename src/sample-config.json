@@ -1,0 +1,13 @@
+{
+  "platforms": [
+    {
+      "platform" : "homebridge-nx-595e",
+      "name" : "homebridge-nx-595e",
+      "username" : "User 1",
+      "pin" : "1234",
+      "ip" : "192.168.1.1",
+      "pollTimer" : 500,
+      "description": "This is a sample config.json file, just to illustrate the necessary configuration for the plugin"
+    }
+  ]
+}
