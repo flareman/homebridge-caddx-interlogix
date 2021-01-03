@@ -1,7 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
 
 import { NX595EPlatform } from './platform';
-import { NX595ESecuritySystem } from "./NX595ESecuritySystem"
+import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
 import { SecuritySystemCommand } from "./definitions";
 
 /**
@@ -33,8 +33,8 @@ export class NX595EPlatformSecurityAreaAccessory {
           validValues: [
             this.platform.Characteristic.SecuritySystemTargetState.STAY_ARM,
             this.platform.Characteristic.SecuritySystemTargetState.AWAY_ARM,
-            this.platform.Characteristic.SecuritySystemTargetState.DISARM
-          ]
+            this.platform.Characteristic.SecuritySystemTargetState.DISARM,
+          ],
       });
       this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemTargetState)!
         .on('set', this.setTargetState.bind(this));
@@ -53,8 +53,8 @@ export class NX595EPlatformSecurityAreaAccessory {
   setTargetState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     // implement your own code to turn your device on/off
     const current = this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemTargetState).value;
-    if (current != this.platform.Characteristic.SecuritySystemTargetState.DISARM &&
-      value != this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
+    if (current !== this.platform.Characteristic.SecuritySystemTargetState.DISARM &&
+      value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
         callback(new Error("Attempting to rearm already armed area"));
         return;
       }

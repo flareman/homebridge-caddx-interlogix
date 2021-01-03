@@ -1,17 +1,18 @@
 {
-  "private": false,
   "displayName": "NX-595E Homebridge Plugin",
-  "name": "homebridge-nx-595e",
+  "name": "homebridge-nx595e",
   "version": "1.0.0",
   "description": "A homebridge plugin for integrating the ComNav/NetworX/CaddX NX-595E network module with HomeKit.",
+  "author": "Spyros Smparounis <nflare@gmail.com> (https://github.com/flareman)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/flareman/homebridge-nx-595e.git"
+    "url": "git://github.com/flareman/homebridge-nx595e.git"
   },
   "bugs": {
-    "url": "https://github.com/flareman/homebridge-nx-595e/issues"
+    "url": "https://github.com/flareman/homebridge-nx595e/issues"
   },
+  "homepage": "https://github.com/flareman/homebridge-nx595e",
   "engines": {
     "node": ">=10.17.0",
     "homebridge": ">=1.0.0"
@@ -33,14 +34,14 @@
     "nx595e",
     "nx-595e",
     "alarm",
-    "security system"
+    "security-system"
   ],
   "devDependencies": {
     "@types/node": "^14.14.6",
     "@typescript-eslint/eslint-plugin": "^4.6.1",
     "@typescript-eslint/parser": "^4.6.1",
     "eslint": "^7.13.0",
-    "homebridge": "^1.2.3",
+    "homebridge": "^1.1.7",
     "nodemon": "^2.0.6",
     "rimraf": "^3.0.2",
     "ts-node": "^9.0.0",

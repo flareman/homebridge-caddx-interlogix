@@ -1,5 +1,5 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-import { NX595ESecuritySystem } from "./NX595ESecuritySystem"
+import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
@@ -28,9 +28,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    let username = <string>this.config.username;
-    let pin = <string>this.config.pin;
-    let ip = <string>this.config.ip;
+    const username = <string>this.config.username;
+    const pin = <string>this.config.pin;
+    const ip = <string>this.config.ip;
     this.pollTimer = <number>this.config.pollTimer;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin);
     this.log.debug('Finished initializing platform:', this.config.name);
@@ -69,12 +69,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     await this.securitySystem.poll();
 
     this.securitySystem.getZones().forEach(zone => {
-      if (this.zoneDelta[zone.bank] != zone.sequence) {
+      if (this.zoneDelta[zone.bank] !== zone.sequence) {
         this.zoneDelta[zone.bank] = zone.sequence;
-        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank == zone.bank);
+        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
-            if (accessory.context.device.type == "sensor")
+            if (accessory.context.device.type === "sensor")
               if (accessory.context.device.isRadar) {
                 accService = accessory.getService(this.Service.MotionSensor);
                 if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
@@ -88,12 +88,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     });
 
     this.securitySystem.getAreas().forEach(area => {
-      if (this.areaDelta[area.bank] != area.sequence) {
+      if (this.areaDelta[area.bank] !== area.sequence) {
         this.areaDelta[area.bank] = area.sequence;
-        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank == area.bank);
+        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === area.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
-            if (accessory.context.device.type == "area") {
+            if (accessory.context.device.type === "area") {
               const status: string = this.securitySystem.getAreaStatus(area.bank);
               const chimeState: boolean = this.securitySystem.getAreaChimeStatus(area.bank);
               let value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
@@ -129,8 +129,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(chimeState);
               accService = accessory.getService(this.Service.SecuritySystem);
               if (accService) {
-                if (status == AreaState.Status[AreaState.State.DELAY_EXIT_2] ||
-                status == AreaState.Status[AreaState.State.DELAY_EXIT_1])
+                if (status === AreaState.Status[AreaState.State.DELAY_EXIT_2] ||
+                status === AreaState.Status[AreaState.State.DELAY_EXIT_1])
                   accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(this.Characteristic.SecuritySystemCurrentState.AWAY_ARM);
                 else
                   accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(value);
@@ -151,7 +151,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   discoverDevices() {
-    let devices: Object[] = [];
+    let devices: Object[];
+    devices = [];
 
     this.securitySystem.getAreas().forEach(area => {
       devices.push({
@@ -197,9 +198,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
           // create the accessory handler for the restored accessory
           // this is imported from `platformAccessory.ts`
-          if (device.type == "area")
+          if (device.type === "area")
             new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
-          else if (device.type == "sensor")
+          else if (device.type === "sensor")
             if (device.isRadar)
               new NX595EPlatformRadarAccessory(this, existingAccessory);
             else new NX595EPlatformContactSensorAccessory(this, existingAccessory);
@@ -224,9 +225,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        if (device.type == "area")
+        if (device.type === "area")
           new NX595EPlatformSecurityAreaAccessory(this, accessory, this.securitySystem);
-        else if (device.type == "sensor")
+        else if (device.type === "sensor")
           if (device.isRadar)
             new NX595EPlatformRadarAccessory(this, accessory);
           else new NX595EPlatformContactSensorAccessory(this, accessory);

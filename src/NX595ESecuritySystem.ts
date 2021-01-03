@@ -1,14 +1,14 @@
-import * as Utilities from "./utility";
+import * as Utilities from './utility';
 import * as superagent from 'superagent';
 import * as parser from 'fast-xml-parser';
-import { Vendor } from "./definitions";
-import { Area } from "./definitions";
-import { Zone } from "./definitions";
-import { SequenceResponse } from "./definitions";
-import { AreaBank } from "./definitions";
-import { AreaState } from "./definitions";
-import { ZoneState } from "./definitions";
-import { SecuritySystemCommand } from "./definitions";
+import { Vendor } from './definitions';
+import { Area } from './definitions';
+import { Zone } from './definitions';
+import { SequenceResponse } from './definitions';
+import { AreaBank } from './definitions';
+import { AreaState } from './definitions';
+import { ZoneState } from './definitions';
+import { SecuritySystemCommand } from './definitions';
 
 
 export class NX595ESecuritySystem {
@@ -16,13 +16,13 @@ export class NX595ESecuritySystem {
   protected passcode: string;
   protected IPAddress: string;
 
-  protected sessionID: string = "";
+  protected sessionID = '';
   protected vendor: Vendor = Vendor.UNDEFINED;
-  protected version: string = "";
-  protected release: string = "";
+  protected version = '';
+  protected release = '';
 
-  protected _isMaster: Boolean = false;
-  protected _isInstaller: Boolean = false;
+  protected _isMaster = false;
+  protected _isInstaller = false;
 
   protected lastUpdate: Date = new Date();
   protected areas: Area[] = [];
@@ -33,17 +33,15 @@ export class NX595ESecuritySystem {
   protected _zvbank: number[][] = [];
 
   constructor(address: string, userid: string, pin: string) {
-    if (Utilities.CheckIPAddress(address))
+    if (Utilities.CheckIPAddress(address)) {
       this.IPAddress = address;
-    else throw new Error("Not a valid IP address");
+    } else { throw new Error('Not a valid IP address'); }
 
-    if(typeof userid!='undefined' && userid)
-      this.username = userid;
-    else throw new Error("Did not specify a username");
+    if (typeof userid!='undefined' && userid) { this.username = userid; }
+    else { throw new Error('Did not specify a username'); }
 
-    if(typeof pin!='undefined' && pin)
-      this.passcode = pin;
-    else throw new Error("Did not specify a user PIN");
+    if (typeof pin!='undefined' && pin) { this.passcode = pin; }
+    else { throw new Error('Did not specify a user PIN'); }
   }
 
   async login() {
@@ -51,14 +49,14 @@ export class NX595ESecuritySystem {
       // Attempting login
       let payload = ({lgname: this.username, lgpin: this.passcode});
       const response = await this.makeRequest('http://' + this.IPAddress + '/login.cgi', payload, false);
-      var correctLine: string = "";
+      let correctLine: string = "";
       const loginPageLine: number = 25;
       const sessionIDLine: number = 28;
       const vendorDetailsLine: number = 6;
-      var data = response.text;
-      var lines1 = data.split("\n");
-      var lines2 = lines1;
-      var lines3 = lines1;
+      let data = response.text;
+      let lines1 = data.split("\n");
+      let lines2 = lines1;
+      let lines3 = lines1;
 
       // Gotta check for successful login
       correctLine = lines1[loginPageLine].trim();

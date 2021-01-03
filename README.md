@@ -6,7 +6,7 @@
 </p>
 
 
-# homebridge-nx-595e
+# homebridge-nx595e
 
 This is a Homebridge plugin for the CaddX/ComNav/NetworX NX-595E network interface with Apple's Home.app.
 
@@ -16,7 +16,7 @@ This is a Homebridge plugin for the CaddX/ComNav/NetworX NX-595E network interfa
 To install, make sure you have a valid Homebridge installation, then run:
 
 ```
-npm install -g homebridge-nx-595e
+npm install -g homebridge-nx595e
 ```
 
 After the installation you will have to edit your config.json file to include necessary parameters for the alarm system to function properly. The plugin supports the Homebridge Plugin Config schema, so you can also edit all necessary values from homebride-config-ui-x.
@@ -25,7 +25,7 @@ After the installation you will have to edit your config.json file to include ne
 
 You need to set the following attributes:
 
-* `platform` - this should always be `homebridge-nx-595e`
+* `platform` - this should always be `homebridge-nx595e`
 * `username` - this is the username you have set in your NX-595E web interface. It is advised that you create a user just for homebridge use, as logging in from another location will log you out on the plugin side of things
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
@@ -34,8 +34,8 @@ You need to set the following attributes:
 A sample config.json platform entry would be:
 ```
 {
-  "platform" : "homebridge-nx-595e",
-  "name" : "homebridge-nx-595e",
+  "platform" : "homebridge-nx595e",
+  "name" : "homebridge-nx595e",
   "username" : "User 1",
   "pin" : "1234",
   "ip" : "192.168.1.1",
@@ -60,7 +60,7 @@ Feel free to assign your accessories to the rooms of your house as they really a
 
 When I started writing this plugin, there was no other option available for what I needed to do, which is integrating the NX-595E with Apple's Homekit and Home.app. After months of researching, I stumbled across the work of [Chris Caron](https://github.com/caronc) and his [UltraSync](https://github.com/caronc/ultrasync) project, which is essentially a library and CLI wrapper for the NX-595E written in Python. I started transfering the entire library to NodeJS using TypeScript, and finally ended up with [node-nx-595e](https://github.com/flareman/node-nx-595e): my own implementation of a library able to connect with the network interface, issue commands to it and report back with the system's state.
 
-The next step was porting the library to a Homebridge plugin. homebridge-nx-595e is exactly that: a plugin for Homebridge that allows for the integration I initially wanted to have. I expanded upon the original work of Chris, adding chime control and sensor reporting, and the plugin feels steady enough to use on a daily basis.
+The next step was porting the library to a Homebridge plugin. homebridge-nx595e is exactly that: a plugin for Homebridge that allows for the integration I initially wanted to have. I expanded upon the original work of Chris, adding chime control and sensor reporting, and the plugin feels steady enough to use on a daily basis.
 
 Feel free to contact me with any suggestions. I will try to keep an eye on pull requests and the issue tracker, if my day job life allows it.
 
