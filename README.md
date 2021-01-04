@@ -3,12 +3,13 @@
 
 <img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
 
-</p>
+[![Paypal](https://img.shields.io/badge/paypal-donate-green.svg)](https://paypal.me/flareman?locale.x=en_US)
 
+</p>
 
 # homebridge-nx595e
 
-This is a Homebridge plugin for the CaddX/ComNav/NetworX NX-595E network interface with Apple's Home.app.
+This is a Homebridge plugin for the [CaddX](https://caddx.gr/product/nx-595e/)/[Interlogic NetworX NX-595E](https://www.interlogix.com/intrusion/product/networx-ip-communication-module) and [Hills ComNav](https://www.hills.com.au/p/fire_security/alarms_intrusion/expansion_modules/Hills-Comnav/S2096A) network interface.
 
 
 ## Installation
@@ -19,7 +20,7 @@ To install, make sure you have a valid Homebridge installation, then run:
 npm install -g homebridge-nx595e
 ```
 
-After the installation you will have to edit your config.json file to include necessary parameters for the alarm system to function properly. The plugin supports the Homebridge Plugin Config schema, so you can also edit all necessary values from homebride-config-ui-x.
+After the installation you will have to edit your config.json file to include necessary parameters for the alarm system to function properly. The plugin supports the Homebridge Plugin Config schema, so you can also edit all necessary values from within the [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x).
 
 ## Configuration
 
@@ -29,7 +30,7 @@ You need to set the following attributes:
 * `username` - this is the username you have set in your NX-595E web interface. It is advised that you create a user just for homebridge use, as logging in from another location will log you out on the plugin side of things
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
-* `pollTimer` - this plugin works by polling the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
+* `pollTimer` - this plugin works by asking the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
 
 A sample config.json platform entry would be:
 ```
@@ -39,13 +40,13 @@ A sample config.json platform entry would be:
   "username" : "User 1",
   "pin" : "1234",
   "ip" : "192.168.1.1",
-  "pollTimer" : 500,
+  "pollTimer" : 500
 }
 ```
 
 ## Usage
 
-After installing and configuring the plugin, Homebridge and (subsequently) Home.app will detect your security system and its components. Areas, zones and sensors are automagically detected based on the area and zone names you have set in your NX-595E web interface, and are reported as such.
+After installing and configuring the plugin, Homebridge, and subsequently Home.app, will detect your security system and its components. Areas, zones and sensors are (sic) automagically detected based on the area and zone names you have set in your NX-595E web interface, and are reported as such.
 
 In detail, after the plugin has started up, you will have the following accessories available:
 
@@ -58,14 +59,14 @@ Feel free to assign your accessories to the rooms of your house as they really a
 
 ## Miscellany
 
-When I started writing this plugin, there was no other option available for what I needed to do, which is integrating the NX-595E with Apple's Homekit and Home.app. After months of researching, I stumbled across the work of [Chris Caron](https://github.com/caronc) and his [UltraSync](https://github.com/caronc/ultrasync) project, which is essentially a library and CLI wrapper for the NX-595E written in Python. I started transfering the entire library to NodeJS using TypeScript, and finally ended up with [node-nx-595e](https://github.com/flareman/node-nx-595e): my own implementation of a library able to connect with the network interface, issue commands to it and report back with the system's state.
+When I started writing this plugin, there was no other option available for what I needed to do, which is integrating the NX-595E with Apple's Homekit and Home.app. After months of researching, I stumbled across the work of [Chris Caron](https://github.com/caronc) and his [UltraSync](https://github.com/caronc/ultrasync) project, which is essentially a library and CLI wrapper for the NX-595E written in Python. I started transferring the entire library to NodeJS using TypeScript, and finally ended up with [node-nx-595e](https://github.com/flareman/node-nx-595e): my own implementation of a library able to connect with the network interface, issue commands to it and report back with the system's state.
 
-The next step was porting the library to a Homebridge plugin. homebridge-nx595e is exactly that: a plugin for Homebridge that allows for the integration I initially wanted to have. I expanded upon the original work of Chris, adding chime control and sensor reporting, and the plugin feels steady enough to use on a daily basis.
+The next step was porting the library to a Homebridge plugin. homebridge-nx595e is exactly that: a plugin for Homebridge that allows for the integration I initially wanted to have. I expanded upon the original work of Chris, adding chime control and sensor reporting, and the plugin feels steady enough to use on a daily basis. Sadly, Interlogix is going out of business, which means that this will eventually grow to become a legacy support piece of software. Then again, this means that the device has an end-of-life feature lock, which would make further debug and (maybe?) feature integration more stable.
 
-Feel free to contact me with any suggestions. I will try to keep an eye on pull requests and the issue tracker, if my day job life allows it.
+Feel free to contact me with any suggestions. I will try to keep an eye on pull requests and the issue tracker, if my day job life allows it. If you feel like it, you can [buy me a coffee](https://paypal.me/flareman?locale.x=en_US) :). Also make sure to thank [Chris](https://github.com/caronc) for his original work, it was what made this possible.
 
 ## Issues / TODO
 There are a few kinks that need ironing out, namely:
 
-1. Even though I have added alarm reporting code, I must be missing something from the original UltraSync source code, as the plugin will not report an alarm, even if it triggers (area status remains "Ready"). This is pretty major and I will try to find out where the bug is, and fix it. Does not affect sensor functionality or arming/disarming capabilities, though.
-2. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows. Should not be too difficult to implement, but \#1 above takes priority.
+1. Burglar alarm reporting works; however, it is the only kind of alarm that triggers the accessory. Medical, fire, panic and duress alarms do not get reported at the time. Arming/disarming/chime capabilities and sensor reporting is not affected, though.
+2. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.

@@ -1,7 +1,9 @@
 {
-  "pluginAlias": "NX-595E",
+  "pluginAlias": "homebridge-nx595e",
   "pluginType": "platform",
   "singular": true,
+  "headerDisplay": "Homebridge support for NX-595E ComNav/CaddX network interface (https://github.com/flareman/homebridge-nx595e/)",
+  "footerDisplay": "Support the author (https://paypal.me/flareman?locale.x=en_US)",
   "schema": {
     "type": "object",
     "properties": {
@@ -9,16 +11,17 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "NX-595E Security System Platform"
+        "default": "NX-595E Security System Platform",
+        "description": "Name of the security platform"
       },
       "username" : {
-        "title": "Username"
+        "title": "Username",
         "type": "string",
         "required": true,
         "description": "The alarm panel username to be used"
       },
       "pin" : {
-        "title": "PIN code"
+        "title": "PIN code",
         "type": "string",
         "required": true,
         "minLength": 4,
@@ -27,14 +30,14 @@
         "description": "The PIN code for the username specified"
       },
       "ip" : {
-        "title": "IP address"
+        "title": "IP address",
         "type": "string",
         "required": true,
         "format": "ipv4",
         "description": "The alarm panel IP address (should be set as static)"
       },
       "pollTimer" : {
-        "title": "Poll delay (in ms)"
+        "title": "Poll delay (in ms)",
         "type": "integer",
         "required": false,
         "placeholder": 500,
