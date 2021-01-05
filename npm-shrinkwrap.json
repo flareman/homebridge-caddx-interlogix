@@ -1,11 +1,10 @@
 {
-  "name": "homebridge-nx595e",
+  "name": "homebridge-caddx-interlogix",
   "version": "1.0.0",
   "lockfileVersion": 2,
   "requires": true,
   "packages": {
     "": {
-      "name": "homebridge-nx595e",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "dependencies": {

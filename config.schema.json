@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "homebridge-nx595e",
+  "pluginAlias": "homebridge-caddx-interlogix",
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Homebridge support for NX-595E ComNav/CaddX network interface (https://github.com/flareman/homebridge-nx595e/)",
