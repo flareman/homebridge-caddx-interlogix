@@ -157,7 +157,7 @@ export class NX595ESecuritySystem {
     // Get area names
     regexMatch = response.text.match(/var\s+areaNames\s+=\s+new\s+Array\((\"(.+)\")\);/);
     let area_names: string[] = regexMatch[1].split(',');
-    area_names.forEach((item, i, arr) => { arr[i] = item.replace(/['"]+/g, ''); })
+    area_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
 
     // Pad sequence table to match the length of area_names table
     if (area_names.length - sequence.length > 0) {
@@ -523,6 +523,10 @@ export class NX595ESecuritySystem {
 
   getZoneState(zone: number): boolean{
     return !(this.zones[zone].status == ZoneState.Ready);
+  }
+
+  getZoneBankState(zone: number): string{
+    return (this.zones[zone].bank_state.join(''));
   }
 
   getAreaStatus(area: number): string {

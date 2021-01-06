@@ -1,8 +1,8 @@
 {
   "platforms": [
     {
-      "platform" : "homebridge-nx-595e",
-      "name" : "homebridge-nx-595e",
+      "platform" : "homebridge-caddx-interlogix",
+      "name" : "homebridge-caddx-interlogix",
       "username" : "User 1",
       "pin" : "1234",
       "ip" : "192.168.1.1",
