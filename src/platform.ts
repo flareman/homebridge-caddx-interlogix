@@ -192,7 +192,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         // the accessory already exists
         if (device) {
           this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-          this.log.debug(device.bank_state);
 
           // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
           // existingAccessory.context.device = device;
@@ -203,10 +202,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
           existingAccessory.context.device = device;
           if (device.type === "area")
             new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
-          else if (device.type === "sensor")
+          else if (device.type === "sensor") {
+            this.log.debug(device.bank_state);
             if (device.isRadar)
               new NX595EPlatformRadarAccessory(this, existingAccessory);
             else new NX595EPlatformContactSensorAccessory(this, existingAccessory);
+          }
           // update accessory cache with any changes to the accessory details and information
           this.api.updatePlatformAccessories([existingAccessory]);
         } else if (!device) {
