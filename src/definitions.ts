@@ -33,7 +33,6 @@ export interface Zone {
   priority: number;
   sequence: number;
   bank_state: number[];
-  isRadar: boolean;
   status: string;
 }
 

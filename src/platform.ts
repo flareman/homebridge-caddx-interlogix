@@ -164,14 +164,19 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       });
     });
 
+    const overrides = (this.config.override) ? this.config.override : [];
+    const hasOverride = (overrides && overrides.length) ? true : false;
+
     this.securitySystem.getZones().forEach(zone => {
+      const shouldOverride = (hasOverride && zone.bank < overrides.length) ? true : false;
+      const zoneName = (shouldOverride && overrides[zone.bank].name && overrides[zone.bank].name !== "") ? overrides[zone.bank].name : zone.name;
       devices.push({
         type: "sensor",
         uniqueID: zone.bank + '#' + zone.name,
         bank: zone.bank,
         bank_state: this.securitySystem.getZoneBankState(zone.bank),
-        displayName: zone.name,
-        isRadar: zone.isRadar
+        displayName: zoneName,
+        isRadar: (shouldOverride) ? ((overrides[zone.bank].sensor === "Radar") ? true: false) : false
       });
     });
 
@@ -199,6 +204,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
           // create the accessory handler for the restored accessory
           // this is imported from `platformAccessory.ts`
+
           existingAccessory.context.device = device;
           if (device.type === "area")
             new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
@@ -241,5 +247,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
     }
+    this.accessories
   }
 }

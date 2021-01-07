@@ -45,6 +45,33 @@
         "minimum": 100,
         "maximum": 5000,
         "description": "Delay in ms between poll requests to the panel for status updates"
+      },
+      "override": {
+        "title": "Zone Overrides",
+        "type": "array",
+        "required": false,
+        "minItems": 0,
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Zone name",
+              "type": "string",
+              "required": false,
+              "description": "The override name for this zone (or left blank if you want to retain the original name)"
+            },
+            "sensor": {
+              "title": "Zone type (Contact or Radar)",
+              "type": "string",
+              "enum": ["Contact", "Radar"],
+              "required": true,
+              "default": "Contact",
+              "description": "The type of this zone sensor, namely \"Contact\" sensor or motion \"Radar\""
+            }
+          }
+        },
+        "uniqueItems": false,
+        "description": "Custom override for zone names and accessory types"
       }
     }
   }

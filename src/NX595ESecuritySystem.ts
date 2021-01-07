@@ -330,8 +330,7 @@ export class NX595ESecuritySystem {
         priority: 6,
         sequence: 0,
         bank_state: [],
-        status: "",
-        isRadar: false
+        status: ""
       };
 
       this.zones.push(newZone);
@@ -397,7 +396,6 @@ export class NX595ESecuritySystem {
       zone.status = status;
       zone.bank_state = this._zvbank[zone.bank];
       zone.sequence = sequence;
-      zone.isRadar = Boolean(zone.bank_state[8]);
     });
 
     return (true);

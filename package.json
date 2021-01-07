@@ -1,7 +1,7 @@
 {
   "displayName": "NX-595E Homebridge Plugin",
   "name": "homebridge-caddx-interlogix",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A homebridge plugin for integrating the ComNav/NetworX/CaddX NX-595E network module with HomeKit.",
   "author": "Spyros Smparounis <nflare@gmail.com> (https://github.com/flareman)",
   "license": "Apache-2.0",

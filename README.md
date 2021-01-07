@@ -31,6 +31,8 @@ You need to set the following attributes:
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
 * `pollTimer` - this plugin works by asking the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
+* `override` - this array of items allows the user to override the names and types of zone sensors. You can either set this manually in config.json, or use the Config UI X form for an easier time. For every zone that you want to override, you specify an array item with two properties: `name` and `sensor`. Name is optional; if you define a name here, it will override the name that the plugin fetches from the network interface. Sensor is mandatory and can be either "Contact" (which is the default), or "Radar", which designates the zone sensor as either a contact or motion sensor. This does not affect the actual function or reporting of the sensor, but changes the way that it appears in Homebridge and HomeKit, which allows for more accurate Siri use and automating. The actual order of items in the `override` array should follow the order of zones in the alarm setup; additional items will be ignored.
+
 
 A sample config.json platform entry would be:
 ```
@@ -40,9 +42,20 @@ A sample config.json platform entry would be:
   "username" : "User 1",
   "pin" : "1234",
   "ip" : "192.168.1.1",
-  "pollTimer" : 500
+  "pollTimer" : 500,
+  "override" : [
+    {"name": "Front Door", "sensor": "Contact"},
+    {"name": "Living Room Window", "sensor": "Contact"},
+    {"sensor": "Contact"},
+    {"sensor": "Contact"},
+    {"sensor": "Radar"},
+    {"sensor": "Contact"},
+    {"name": "Hallway Radar", "sensor": "Radar"}
+  ]
 }
 ```
+
+The example above defines the necessary parameters for connecting with the network interface, and overrides the first seven zones, overwriting the names for the first two and the seventh contacts, and defining zone sensors \#5 and \#7 as motion sensors.
 
 ## Usage
 
@@ -52,8 +65,8 @@ In detail, after the plugin has started up, you will have the following accessor
 
 1. Areas as security systems. Every area has its own security system switch in Homebridge, with Home, Away and Disarmed functionality. The plugin intelligently updates while the alarm system is arming, and will report likewise. In order to avoid mistakes, once an area is armed in either setting, it will not allow rearming until it has been disarmed.
 2. Along with every area's security system you will find included a "chime" switch. This allows you to enable/disable the alarm system's namesake function, which chimes whenever a contact sensor changes state.
-3. Contact sensors will present as such, and - as stated above - will inherit the names you have set in your web interface.
-4. Likewise, radars will present as motion sensors, without any need for user input: the plugin infers the sensor type from the panel response. Motion is reported momentarily when the radar detects it, but that is enough for any automations you want to script.
+3. Contact and radar sensors will present as such, and - as stated above - will inherit the names you have set in your web interface.
+4. Radars will initally present as contact sensors. Motion is reported momentarily when the radar detects it, but that is enough for any automations you want to script. If you want the sensor to actually register as a motion sensor, then you have to set the override value to an array of values that define the actual names and sensor types of zones (see above).
 
 Feel free to assign your accessories to the rooms of your house as they really are, it helps with automating.
 
@@ -65,8 +78,16 @@ The next step was porting the library to a Homebridge plugin. homebridge-caddx-i
 
 Feel free to contact me with any suggestions. I will try to keep an eye on pull requests and the issue tracker, if my day job life allows it. If you feel like it, you can [buy me a coffee](https://paypal.me/flareman?locale.x=en_US) :). Also make sure to thank [Chris](https://github.com/caronc) for his original work, it was what made this possible.
 
-## Issues / TODO
+## TODO / Issues
 There are a few kinks that need ironing out, namely:
 
-1. Burglar alarm reporting works; however, it is the only kind of alarm that triggers the accessory. Medical, fire, panic and duress alarms do not get reported at the time. Arming/disarming/chime capabilities and sensor reporting is not affected, though.
-2. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.
+1. At present, even though cached accessories are restored properly, if you define any overrides, Homebridge retains the old (overrided) sensor in its cache. Theoretically this should not work, as the accessories retain the same unique ID and are updated after they are restored from cache. It might be a Homebridge bug, I'll have to look more into it. For now, you'll just have to remove the deprecated accessories by hand from the Homebridge Config UI X.
+2. Burglar alarm reporting works; however, it is the only kind of alarm that triggers the accessory. Medical, fire, panic and duress alarms do not get reported at this time. Arming/disarming/chime capabilities and sensor reporting is not affected, though.
+3. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.
+
+## Changelog
+
+* 1.0.3 Added override customization option to zone sensors
+* 1.0.2 Fixed URI decoding in zone and area names
+* 1.0.1 Fixed '%20' instead of blank in zone names
+* 1.0.0 Initial release
