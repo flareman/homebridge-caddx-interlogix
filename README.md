@@ -78,12 +78,17 @@ The next step was porting the library to a Homebridge plugin. homebridge-caddx-i
 
 Feel free to contact me with any suggestions. I will try to keep an eye on pull requests and the issue tracker, if my day job life allows it. If you feel like it, you can [buy me a coffee](https://paypal.me/flareman?locale.x=en_US) :). Also make sure to thank [Chris](https://github.com/caronc) for his original work, it was what made this possible.
 
-## TODO / Issues
+## Issues
 There are a few kinks that need ironing out, namely:
 
 1. At present, even though cached accessories are restored properly, if you define any overrides, Homebridge retains the old (overrided) sensor in its cache. Theoretically this should not work, as the accessories retain the same unique ID and are updated after they are restored from cache. It might be a Homebridge bug, I'll have to look more into it. For now, you'll just have to remove the deprecated accessories by hand from the Homebridge Config UI X.
 2. Burglar alarm reporting works; however, it is the only kind of alarm that triggers the accessory. Medical, fire, panic and duress alarms do not get reported at this time. Arming/disarming/chime capabilities and sensor reporting is not affected, though.
-3. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.
+
+## Ideas for improvement/expansion
+1. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.
+2. I also have a thought to add the ability to bypass zones by adding a switch to every sensor for that purpose. If anyone is interested, please let me know and I'll look into this.
+
+
 
 ## Changelog
 
