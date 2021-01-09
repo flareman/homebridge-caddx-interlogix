@@ -3,18 +3,22 @@ export enum Vendor {
   UNDEFINED = "NONE"
 }
 
-export enum SecuritySystemCommand {
+export enum SecuritySystemAreaCommand {
   AREA_CHIME_TOGGLE = 1,
   AREA_DISARM = 16,
   AREA_AWAY = 17,
   AREA_STAY = 18
 }
 
+export enum SecuritySystemZoneCommand {
+  ZONE_BYPASS = 1
+}
+
 export enum SecuritySystemCLIScenes {
-  "chime" = SecuritySystemCommand.AREA_CHIME_TOGGLE,
-  "disarm" = SecuritySystemCommand.AREA_DISARM,
-  "away" = SecuritySystemCommand.AREA_AWAY,
-  "stay" = SecuritySystemCommand.AREA_STAY
+  "chime" = SecuritySystemAreaCommand.AREA_CHIME_TOGGLE,
+  "disarm" = SecuritySystemAreaCommand.AREA_DISARM,
+  "away" = SecuritySystemAreaCommand.AREA_AWAY,
+  "stay" = SecuritySystemAreaCommand.AREA_STAY
 }
 
 export interface Area {
@@ -29,11 +33,14 @@ export interface Area {
 
 export interface Zone {
   bank: number;
+  associatedArea: number;
   name: string;
   priority: number;
   sequence: number;
   bank_state: number[];
   status: string;
+  isBypassed: boolean;
+  autoBypass: boolean;
 }
 
 export interface SequenceResponse {
@@ -137,12 +144,12 @@ enum _ZoneState  {
   UNKWN_00 = 0,
   UNKWN_01 = 1,
   UNKWN_02 = 2,
-  UNKWN_03 = 3,
+  BYPASSED = 3,
   UNKWN_04 = 4,
   UNKWN_05 = 5,
   UNKWN_06 = 6,
   UNKWN_07 = 7,
-  UNKWN_08 = 8,
+  AUTOBYPASS = 8,
   UNKWN_09 = 9,
   UNKWN_10 = 10,
   UNKWN_11 = 11,

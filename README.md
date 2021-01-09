@@ -67,6 +67,7 @@ In detail, after the plugin has started up, you will have the following accessor
 2. Along with every area's security system you will find included a "chime" switch. This allows you to enable/disable the alarm system's namesake function, which chimes whenever a contact sensor changes state.
 3. Contact and radar sensors will present as such, and - as stated above - will inherit the names you have set in your web interface.
 4. Radars will initally present as contact sensors. Motion is reported momentarily when the radar detects it, but that is enough for any automations you want to script. If you want the sensor to actually register as a motion sensor, then you have to set the override value to an array of values that define the actual names and sensor types of zones (see above).
+5. Every zone sensor has a "bypass" switch included, which allows you to see or set the bypass state for a zone. Keep in mind that the plugin mimics the standard alarm control panel behavior: when an area is armed, the zone sensors bypass status can't be changed.
 
 Feel free to assign your accessories to the rooms of your house as they really are, it helps with automating.
 
@@ -86,12 +87,10 @@ There are a few kinks that need ironing out, namely:
 
 ## Ideas for improvement/expansion
 1. I have an idea of adding time "persistence" to the radars, that is, if a radar detects movement, the sensor should be able to report it for more than a few seconds (e.g. for a minute or two). This is, for example, the default behavior of Xiaomi/Aqara motion sensors, albeit their implementation locks out new detections for two whole minutes, with no option for different time windows.
-2. I also have a thought to add the ability to bypass zones by adding a switch to every sensor for that purpose. If anyone is interested, please let me know and I'll look into this.
-
-
 
 ## Changelog
 
+* 1.0.4 Added zone bypassing capabilities. Also, the system now will not allow an arming command to go through when an area is not ready for arming (i.e. contact sensor at fault without being bypassed)
 * 1.0.3 Added override customization option to zone sensors
 * 1.0.2 Fixed URI decoding in zone and area names
 * 1.0.1 Fixed '%20' instead of blank in zone names

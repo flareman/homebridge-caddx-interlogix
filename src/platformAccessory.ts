@@ -2,7 +2,9 @@ import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallb
 
 import { NX595EPlatform } from './platform';
 import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
-import { SecuritySystemCommand } from "./definitions";
+import { SecuritySystemAreaCommand } from "./definitions";
+import { SecuritySystemZoneCommand } from "./definitions";
+import { AreaState } from "./definitions";
 
 /**
  * Platform Accessory
@@ -52,24 +54,33 @@ export class NX595EPlatformSecurityAreaAccessory {
    */
   setTargetState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     // implement your own code to turn your device on/off
-    const current = this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemTargetState).value;
+    const current = this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemCurrentState).value;
+    const isNotReady = (this.securitySystem.getAreaStatus(this.accessory.context.device.bank) === AreaState.Status[AreaState.State.NOT_READY]) ? true : false;
+    if (isNotReady && value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
+      const error = new Error("Area is not ready for arming")
+      this.platform.log.error(error.message);
+      callback(error);
+      return;
+    }
+
     if (current !== this.platform.Characteristic.SecuritySystemTargetState.DISARM &&
       value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
-        callback(new Error("Attempting to rearm already armed area"));
-        return;
+        const error = new Error("Attempting to arm already armed area")
+        this.platform.log.error(error.message);
+        callback(error);
       }
-    let command: SecuritySystemCommand = SecuritySystemCommand.AREA_DISARM;
+    let command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_DISARM;
     switch (value) {
       case this.platform.Characteristic.SecuritySystemTargetState.AWAY_ARM: {
-        command = SecuritySystemCommand.AREA_AWAY;
+        command = SecuritySystemAreaCommand.AREA_AWAY;
         break;
       }
       case this.platform.Characteristic.SecuritySystemTargetState.STAY_ARM: {
-        command = SecuritySystemCommand.AREA_STAY;
+        command = SecuritySystemAreaCommand.AREA_STAY;
         break;
       }
       case this.platform.Characteristic.SecuritySystemTargetState.DISARM: {
-        command = SecuritySystemCommand.AREA_DISARM;
+        command = SecuritySystemAreaCommand.AREA_DISARM;
         break;
       }
       default: {
@@ -77,7 +88,7 @@ export class NX595EPlatformSecurityAreaAccessory {
         return;
       }
     }
-    this.securitySystem.sendCommand(command, this.accessory.context.device.bank);
+    this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
 
     this.platform.log.debug('Set Characteristic On ->', value);
 
@@ -87,21 +98,53 @@ export class NX595EPlatformSecurityAreaAccessory {
 
   setChimeState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     // implement your own code to turn your device on/off
-    this.securitySystem.sendCommand(SecuritySystemCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
+    this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
 
     this.platform.log.debug('Set Characteristic On ->', value);
 
     // you must call the callback function
     callback(null);
-  }}
+  }
+}
 
-export class NX595EPlatformContactSensorAccessory {
-  private service: Service;
+class NX595EPlatformSensorAccessory {
+  private bypassService: Service;
 
   constructor(
-    private readonly platform: NX595EPlatform,
-    private readonly accessory: PlatformAccessory,
+    protected readonly platform: NX595EPlatform,
+    protected readonly accessory: PlatformAccessory,
   ) {
+    this.bypassService = this.accessory.getService(this.platform.Service.Switch) || this.accessory.addService(this.platform.Service.Switch);
+
+    this.bypassService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Bypass");
+    this.bypassService.getCharacteristic(this.platform.Characteristic.On)!
+      .on('set', this.setBypassState.bind(this));
+  }
+
+  setBypassState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    // implement your own code to turn your device on/off
+    const isArmed = this.platform.securitySystem.getAreaArmStatus(this.accessory.context.device.associatedArea);
+    if (isArmed) {
+      const error = new Error("Area is armed; cannot change bypass status")
+      this.platform.log.error(error.message);
+      callback(error);
+      return;
+    }
+
+    this.platform.securitySystem.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
+
+    this.platform.log.debug('Set Characteristic On ->', value);
+
+    // you must call the callback function
+    callback(null);
+  }
+}
+
+export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAccessory {
+  private service: Service;
+
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
+    super(platform, accessory);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')
@@ -114,13 +157,11 @@ export class NX595EPlatformContactSensorAccessory {
 
 }
 
-export class NX595EPlatformRadarAccessory {
+export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(
-    private readonly platform: NX595EPlatform,
-    private readonly accessory: PlatformAccessory,
-  ) {
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
+    super(platform, accessory);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')

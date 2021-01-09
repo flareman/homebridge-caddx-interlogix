@@ -74,6 +74,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
+            accService = accessory.getService(this.Service.Switch);
+            if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(zone.isBypassed);
             if (accessory.context.device.type === "sensor")
               if (accessory.context.device.isRadar) {
                 accService = accessory.getService(this.Service.MotionSensor);
@@ -174,6 +176,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         type: "sensor",
         uniqueID: zone.bank + '#' + zone.name,
         bank: zone.bank,
+        associatedArea: zone.associatedArea,
         bank_state: this.securitySystem.getZoneBankState(zone.bank),
         displayName: zoneName,
         isRadar: (shouldOverride) ? ((overrides[zone.bank].sensor === "Radar") ? true: false) : false

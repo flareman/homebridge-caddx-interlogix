@@ -8,7 +8,8 @@ import { SequenceResponse } from './definitions';
 import { AreaBank } from './definitions';
 import { AreaState } from './definitions';
 import { ZoneState } from './definitions';
-import { SecuritySystemCommand } from './definitions';
+import { SecuritySystemAreaCommand } from './definitions';
+import { SecuritySystemZoneCommand } from './definitions';
 
 
 export class NX595ESecuritySystem {
@@ -97,10 +98,10 @@ export class NX595ESecuritySystem {
     } catch (error) { console.error(error); return (false); }
   }
 
-  async sendCommand(command: SecuritySystemCommand = SecuritySystemCommand.AREA_CHIME_TOGGLE, areas: number[] | number = []) {
+  async sendAreaCommand(command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, areas: number[] | number = []) {
     try {
       if (this.sessionID === "" && !(this.login())) return (false);
-      if (!(command in SecuritySystemCommand)) throw new Error('Invalid alarm state ' + command);
+      if (!(command in SecuritySystemAreaCommand)) throw new Error('Invalid alarm state ' + command);
 
       // Load actual area banks to local table for ease of use
       let actionableAreas: number[] = [];
@@ -128,6 +129,43 @@ export class NX595ESecuritySystem {
 
           // Finally make the request
           await this.makeRequest('http://' + this.IPAddress + '/user/keyfunction.cgi', payload);
+        }
+      }
+      return true;
+    } catch (error) { console.error(error); return false; }
+  }
+
+  async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
+    try {
+      if (this.sessionID === "" && !(this.login())) return (false);
+      if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
+
+      // Load actual area banks to local table for ease of use
+      let actionableZones: number[] = [];
+      let actualZones: number[] = [];
+      for (let i of this.zones) actualZones.push(i.bank);
+
+      // Decipher input and prepare actionableAreas table for looping through
+      if (typeof(zones) == 'number') actionableZones.push(zones);
+      else if (Array.isArray(zones) && zones.length > 0) actionableZones = zones;
+      else actionableZones = actualZones;
+
+      // For every area in actionableAreas:
+      for (let i of actionableZones) {
+        // Check if the actual area exists
+        if (!actualZones.includes(i)) throw new Error('Specified area ' + i + ' not found');
+        else {
+          // Prepare the payload according to details
+          type payloadType = {[key: string]: string};
+          let payload: payloadType = {};
+          payload['sess'] = this.sessionID;
+          payload['comm'] = '82';
+          payload['data0'] = i.toString();
+          // At present the only zone command is zone bypass so no need to pass on an actual command
+          // payload['data1'] = String(command);
+
+          // Finally make the request
+          await this.makeRequest('http://' + this.IPAddress + '/user/zonefunction.cgi', payload);
         }
       }
       return true;
@@ -326,11 +364,14 @@ export class NX595ESecuritySystem {
       // Create a new Zone object and populate it with the zone details, then push it
       let newZone: Zone = {
         bank: i,
+        associatedArea: -1,
         name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ""),
         priority: 6,
         sequence: 0,
         bank_state: [],
-        status: ""
+        status: "",
+        isBypassed: false,
+        autoBypass: false
       };
 
       this.zones.push(newZone);
@@ -374,7 +415,7 @@ export class NX595ESecuritySystem {
       if (vbank[ZoneState.State.UNKWN_01] || vbank[ZoneState.State.UNKWN_02] || vbank[ZoneState.State.UNKWN_06] || vbank[ZoneState.State.UNKWN_07]) priority = 2;
 
       // Yellow zone status
-      if (vbank[ZoneState.State.UNKWN_03] || vbank[ZoneState.State.UNKWN_04]) priority = 3;
+      if (vbank[ZoneState.State.BYPASSED] || vbank[ZoneState.State.UNKWN_04]) priority = 3;
 
       // Grey zone status
       if (vbank[ZoneState.State.UNKWN_00]) priority = 4;
@@ -396,6 +437,9 @@ export class NX595ESecuritySystem {
       zone.status = status;
       zone.bank_state = this._zvbank[zone.bank];
       zone.sequence = sequence;
+      zone.isBypassed = vbank[ZoneState.State.BYPASSED];
+      zone.autoBypass = vbank[ZoneState.State.AUTOBYPASS];
+      zone.associatedArea = index;
     });
 
     return (true);
@@ -533,6 +577,10 @@ export class NX595ESecuritySystem {
 
   getAreaChimeStatus(area: number): boolean {
     return (this.areas[area].states["chime"]);
+  }
+
+  getAreaArmStatus(area: number): boolean {
+    return (this.areas[area].states["armed"] || this.areas[area].states["partial"] || this.areas[area].states["exit1"] || this.areas[area].states["exit2"]);
   }
 
   getFirmwareVersion(): string {
