@@ -68,6 +68,7 @@ export class NX595EPlatformSecurityAreaAccessory {
         const error = new Error("Attempting to arm already armed area")
         this.platform.log.error(error.message);
         callback(error);
+        return;
       }
     let command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_DISARM;
     switch (value) {
