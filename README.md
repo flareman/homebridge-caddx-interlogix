@@ -90,6 +90,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.0.5 Fixed a bug where attempting to rearm an already armed zone would crash the Homebridge instance
 * 1.0.4 Added zone bypassing capabilities. Also, the system now will not allow an arming command to go through when an area is not ready for arming (i.e. contact sensor at fault without being bypassed)
 * 1.0.3 Added override customization option to zone sensors
 * 1.0.2 Fixed URI decoding in zone and area names
