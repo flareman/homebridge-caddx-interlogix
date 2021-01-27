@@ -359,7 +359,10 @@ export class NX595ESecuritySystem {
     // ... and populate it from scratch
     zone_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
-      if (name == "" || name == "%21" || name == "!") return;
+      if (name == "" || name == "%21" || name == "!") {
+        i++;
+        return;
+      }
 
       // Create a new Zone object and populate it with the zone details, then push it
       let newZone: Zone = {
