@@ -377,7 +377,7 @@ export class NX595ESecuritySystem {
         autoBypass: false
       };
 
-      this.zones.push(newZone);
+      this.zones[i] = newZone;
     });
 
     this.processZones();
