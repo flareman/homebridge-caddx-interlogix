@@ -126,3 +126,5 @@ accessories
 accessories/*
 .vscode
 .vscode/*
+
+.DS_Store
