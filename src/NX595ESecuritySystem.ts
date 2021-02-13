@@ -144,7 +144,10 @@ export class NX595ESecuritySystem {
       // Load actual area banks to local table for ease of use
       let actionableZones: number[] = [];
       let actualZones: number[] = [];
-      for (let i of this.zones) actualZones.push(i.bank);
+      for (let i of this.zones) {
+        if (i == undefined) return;
+        actualZones.push(i.bank);
+      }
 
       // Decipher input and prepare actionableAreas table for looping through
       if (typeof(zones) == 'number') actionableZones.push(zones);

@@ -90,6 +90,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.0.10 Fixed a bug in followup to commit 3bc2290 where zone bypass commands were crashing the plugin
 * 1.0.7 - 1.0.9 Attempt to fix crashing behavior while parsing installations with non-sequential zone bank numbers; special thanks go to  ([@mabrodeur](https://github.com/mabrodeur)) for help with debugging
 * 1.0.6 Changed the retrieveZones function in security system source code to modify the counter, in order to account for non-sequential zone setup on the installer's side; props go to Jo Lienhoop ([@](https://github.com/JoHoop)) for discovering this bug
 * 1.0.5 Fixed a bug where attempting to rearm an already armed zone would crash the Homebridge instance
