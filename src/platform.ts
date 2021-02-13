@@ -69,6 +69,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     await this.securitySystem.poll();
 
     this.securitySystem.getZones().forEach(zone => {
+      if (zone == undefined) return;
       if (this.zoneDelta[zone.bank] !== zone.sequence) {
         this.zoneDelta[zone.bank] = zone.sequence;
         const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
@@ -170,6 +171,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     const hasOverride = (overrides && overrides.length) ? true : false;
 
     this.securitySystem.getZones().forEach(zone => {
+      if (zone == undefined) return;
       const shouldOverride = (hasOverride && zone.bank < overrides.length) ? true : false;
       const zoneName = (shouldOverride && overrides[zone.bank].name && overrides[zone.bank].name !== "") ? overrides[zone.bank].name : zone.name;
       devices.push({
