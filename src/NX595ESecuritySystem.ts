@@ -145,7 +145,7 @@ export class NX595ESecuritySystem {
       let actionableZones: number[] = [];
       let actualZones: number[] = [];
       for (let i of this.zones) {
-        if (i == undefined) return;
+        if (i == undefined) continue;
         actualZones.push(i.bank);
       }
 
