@@ -359,6 +359,7 @@ export class NX595ESecuritySystem {
 
     // ... and populate it from scratch
     this.zoneNameCount = zone_names.length;
+    this.zones = Array(this.zoneNameCount).fill(undefined);
     zone_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
       if (name == "" || name == "%21" || name == "!") {
@@ -397,6 +398,7 @@ export class NX595ESecuritySystem {
 
     // Loop through detected areas
     this.zones.forEach(zone => {
+      if (zone == undefined) return;
       // Set our mask and initial offset
       let mask: number = 1 << zone.bank % 16;
       let index: number = Math.floor(zone.bank / 16);

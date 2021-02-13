@@ -90,7 +90,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
-* 1.0.7 Attempt to fix crashing behavior while parsing installations with non-sequential zone bank numbers; special thanks go to  ([@mabrodeur](https://github.com/mabrodeur)) for help with debugging
+* 1.0.7 - 1.0.8 Attempt to fix crashing behavior while parsing installations with non-sequential zone bank numbers; special thanks go to  ([@mabrodeur](https://github.com/mabrodeur)) for help with debugging
 * 1.0.6 Changed the retrieveZones function in security system source code to modify the counter, in order to account for non-sequential zone setup on the installer's side; props go to Jo Lienhoop ([@](https://github.com/JoHoop)) for discovering this bug
 * 1.0.5 Fixed a bug where attempting to rearm an already armed zone would crash the Homebridge instance
 * 1.0.4 Added zone bypassing capabilities. Also, the system now will not allow an arming command to go through when an area is not ready for arming (i.e. contact sensor at fault without being bypassed)
