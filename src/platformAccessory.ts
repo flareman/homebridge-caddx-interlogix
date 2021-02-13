@@ -124,13 +124,14 @@ class NX595EPlatformSensorAccessory {
 
   setBypassState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     // implement your own code to turn your device on/off
-    const isArmed = this.platform.securitySystem.getAreaArmStatus(this.accessory.context.device.associatedArea);
-    if (isArmed) {
-      const error = new Error("Area is armed; cannot change bypass status")
-      this.platform.log.error(error.message);
-      callback(error);
-      return;
-    }
+
+    // const isArmed = this.platform.securitySystem.getAreaArmStatus(this.accessory.context.device.associatedArea);
+    // if (isArmed) {
+    //   const error = new Error("Area is armed; cannot change bypass status")
+    //   this.platform.log.error(error.message);
+    //   callback(error);
+    //   return;
+    // }
 
     this.platform.securitySystem.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
 
