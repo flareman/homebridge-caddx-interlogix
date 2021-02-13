@@ -28,6 +28,7 @@ export class NX595ESecuritySystem {
   protected lastUpdate: Date = new Date();
   protected areas: Area[] = [];
   protected zones: Zone[] = [];
+  protected zoneNameCount: number = 0;
   protected __extra_area_status: string[] = [];
   protected zonesSequence: number[] = [];
   protected zonesBank: number[][] = [];
@@ -357,6 +358,7 @@ export class NX595ESecuritySystem {
     this.zones.length = 0;
 
     // ... and populate it from scratch
+    this.zoneNameCount = zone_names.length;
     zone_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
       if (name == "" || name == "%21" || name == "!") {
@@ -391,7 +393,7 @@ export class NX595ESecuritySystem {
       return false;
     }
 
-    this._zvbank.length = 0;
+    this._zvbank = Array(this.zoneNameCount).fill([]);
 
     // Loop through detected areas
     this.zones.forEach(zone => {
@@ -404,7 +406,6 @@ export class NX595ESecuritySystem {
 
       // Create a virtual zone state table for ease of reference
       let vbank: boolean[] = [];
-      this._zvbank.push([]);
       this.zonesBank.forEach(element => {
         let value: boolean = Boolean(element[index] & mask);
         vbank.push(value);
