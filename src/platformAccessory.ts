@@ -46,6 +46,8 @@ export class NX595EPlatformSecurityAreaAccessory {
       this.chimeService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Chime");
       this.chimeService.getCharacteristic(this.platform.Characteristic.On)!
         .on('set', this.setChimeState.bind(this));
+
+        this.platform.log.debug('Alarm system created: ', accessory.context.device.displayName);
   }
 
   /**
@@ -91,7 +93,7 @@ export class NX595EPlatformSecurityAreaAccessory {
     }
     this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
 
-    this.platform.log.debug('Set Characteristic On ->', value);
+    this.platform.log.debug('Set Alarm State Characteristic On ->', value);
 
     // you must call the callback function
     callback(null);
@@ -101,7 +103,7 @@ export class NX595EPlatformSecurityAreaAccessory {
     // implement your own code to turn your device on/off
     this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
 
-    this.platform.log.debug('Set Characteristic On ->', value);
+    this.platform.log.debug('Set Chime Characteristic On ->', value);
 
     // you must call the callback function
     callback(null);
@@ -155,6 +157,8 @@ export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAc
 
     this.service = this.accessory.getService(this.platform.Service.ContactSensor) || this.accessory.addService(this.platform.Service.ContactSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+
+    this.platform.log.debug('Contact Sensor created: ', accessory.context.device.displayName);
   }
 
 }
@@ -172,5 +176,6 @@ export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory 
 
     this.service = this.accessory.getService(this.platform.Service.MotionSensor) || this.accessory.addService(this.platform.Service.MotionSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+    this.platform.log.debug('Radar created: ', accessory.context.device.displayName);
   }
 }

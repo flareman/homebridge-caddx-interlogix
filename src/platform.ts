@@ -158,6 +158,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     devices = [];
 
     this.securitySystem.getAreas().forEach(area => {
+      this.log.debug('Detected area: ', area.name);
       devices.push({
         type: "area",
         uniqueID: area.bank + '#' + area.name,
@@ -174,6 +175,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       if (zone == undefined) return;
       const shouldOverride = (hasOverride && zone.bank < overrides.length) ? true : false;
       const zoneName = (shouldOverride && overrides[zone.bank].name && overrides[zone.bank].name !== "") ? overrides[zone.bank].name : zone.name;
+      this.log.debug('Detected zone: ', zone.name);
       devices.push({
         type: "sensor",
         uniqueID: zone.bank + '#' + zone.name,
