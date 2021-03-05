@@ -365,7 +365,7 @@ export class NX595ESecuritySystem {
     this.zones = Array(this.zoneNameCount).fill(undefined);
     zone_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
-      if (name == "%21" || name == "!") {
+      if (name == "%21" || name == "!" || (zoneNaming && name == "")) {
         i++;
         return;
       }
@@ -374,7 +374,7 @@ export class NX595ESecuritySystem {
       let newZone: Zone = {
         bank: i,
         associatedArea: -1,
-        name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ""),
+        name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ('Sensor ' + (i+1))),
         priority: 6,
         sequence: 0,
         bank_state: [],

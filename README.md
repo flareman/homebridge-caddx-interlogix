@@ -90,6 +90,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.0.15 Removed unnamed zones pruning from core logic for versions up to 0.106
 * 1.0.14 Allowed for unnamed zones for compatibility with pre-.106 version interfaces
 * 1.0.13 Added debug output for testing purposes
 * 1.0.12 Disabled the arm status check before issuing a zone bypass command; need a way to determine which zones are assigned to which area
