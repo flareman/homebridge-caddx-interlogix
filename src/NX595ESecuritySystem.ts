@@ -214,7 +214,7 @@ export class NX595ESecuritySystem {
     // ... and populate it from scratch
     area_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
-      if (name == "" || name == "%21" || name == "!") return;
+      if (name == "%21" || name == "!") return;
 
       // Create a new Area object and populate it with the area details, then push it
       let newArea: Area = {
@@ -365,7 +365,7 @@ export class NX595ESecuritySystem {
     this.zones = Array(this.zoneNameCount).fill(undefined);
     zone_names.forEach((name, i) => {
       // If the name is "!" it's an empty area; ignore it
-      if (name == "" || name == "%21" || name == "!") {
+      if (name == "%21" || name == "!") {
         i++;
         return;
       }
