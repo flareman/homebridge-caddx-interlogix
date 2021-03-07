@@ -4,6 +4,7 @@ import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
 import { NX595EPlatformContactSensorAccessory } from './platformAccessory';
+import { NX595EPlatformSmokeSensorAccessory } from './platformAccessory';
 import { NX595EPlatformRadarAccessory } from './platformAccessory';
 import { AreaState } from './definitions';
 
@@ -81,6 +82,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               if (accessory.context.device.isRadar) {
                 accService = accessory.getService(this.Service.MotionSensor);
                 if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
+              } else if (accessory.context.device.isSmokeSensor) {
+                accService = accessory.getService(this.Service.SmokeSensor);
+                if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
               } else {
                 accService = accessory.getService(this.Service.ContactSensor);
                 if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(this.securitySystem.getZoneState(zone.bank));
@@ -168,11 +172,58 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       });
     });
 
+    // Get override zones table from configuration
     const overrides = (this.config.override) ? this.config.override : [];
     const hasOverride = (overrides && overrides.length) ? true : false;
 
+    // Populate ignore zones table from configuration
+    // Zone ignoring should be declared in plugin config as a string of numbers
+    // separated by commas; ranges are allowed as well
+    // Negative zone indexes, invalid ranges and out-of-index zones cause an
+    // exception to be thrown
+    // Examples:
+    // 1,2,8
+    // 3-5
+    // 1,4-6,8,11,23-28
+    let ignores: Boolean[] = new Array(this.securitySystem.getZones().length).fill(false);
+    const ignoreString: string = (this.config.ignoreZones) ? this.config.ignoreZones : undefined;
+    if (ignoreString != undefined) {
+      if ((new RegExp("^\\d{1,3}(?:-\\d{1,3})?(?:,\\d{1,3}(?:-\\d{1,3})?)*$")).test(ignoreString)) {
+        const ignoreZones = ignoreString.split(',');
+        ignoreZones.forEach(element => {
+          if (new RegExp('^[0-9]+$').test(element)) {
+            const ignoreIndex = parseInt(element);
+            if (ignoreIndex > ignores.length) {
+              throw new Error("Zone " + element + " required to ignore exceeds zone count!");
+            } else {
+              ignores[ignoreIndex-1] = true;
+            }
+          } else {
+            const ignoreRange = element.split('-');
+            const rangeStart = parseInt(ignoreRange[0]);
+            const rangeEnd = parseInt(ignoreRange[1]);
+            if (rangeStart > ignores.length || rangeEnd > ignores.length) {
+              throw new Error("Zone range " + element + " required to ignore violates zone count!");
+            } else {
+              const rangeDiff = rangeEnd - rangeStart;
+              if (rangeDiff <= 0) {
+                throw new Error("Zone ranges should be declared from lower to higer zone index (zone range was: " + element + ")!");
+              } else {
+                for (let i = rangeStart; rangeEnd; i++) {
+                  ignores[i-1] = true;
+                }
+              }
+            }
+          }
+        })
+      } else {
+        throw new Error('Ignore zones string "' + ignoreString + '" has wrong syntax!');
+      }
+    }
+
     this.securitySystem.getZones().forEach(zone => {
       if (zone == undefined) return;
+      if (ignores[zone.bank]) return;
       const shouldOverride = (hasOverride && zone.bank < overrides.length) ? true : false;
       const zoneName = (shouldOverride && overrides[zone.bank].name && overrides[zone.bank].name !== "") ? overrides[zone.bank].name : zone.name;
       this.log.debug('Detected zone: ', zone.name);
@@ -183,7 +234,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         associatedArea: zone.associatedArea,
         bank_state: this.securitySystem.getZoneBankState(zone.bank),
         displayName: zoneName,
-        isRadar: (shouldOverride) ? ((overrides[zone.bank].sensor === "Radar") ? true: false) : false
+        isRadar: (shouldOverride) ? ((overrides[zone.bank].sensor === "Radar") ? true: false) : false,
+        isSmokeSensor: (shouldOverride) ? ((overrides[zone.bank].sensor === "Smoke") ? true: false) : false
       });
     });
 
@@ -219,6 +271,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
             this.log.debug(device.bank_state);
             if (device.isRadar)
               new NX595EPlatformRadarAccessory(this, existingAccessory);
+            else if (device.isSmokeSensor)
+              new NX595EPlatformSmokeSensorAccessory(this, existingAccessory);
             else new NX595EPlatformContactSensorAccessory(this, existingAccessory);
           }
           // update accessory cache with any changes to the accessory details and information
@@ -248,6 +302,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         else if (device.type === "sensor")
           if (device.isRadar)
             new NX595EPlatformRadarAccessory(this, accessory);
+          else if (device.isSmokeSensor)
+            new NX595EPlatformSmokeSensorAccessory(this, accessory);
           else new NX595EPlatformContactSensorAccessory(this, accessory);
 
         // link the accessory to your platform

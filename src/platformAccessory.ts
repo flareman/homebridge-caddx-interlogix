@@ -163,6 +163,25 @@ export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAc
 
 }
 
+export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAccessory {
+  private service: Service;
+
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
+    super(platform, accessory);
+    // set accessory information
+    this.accessory.getService(this.platform.Service.AccessoryInformation)!
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')
+      .setCharacteristic(this.platform.Characteristic.Model, 'Smoke Sensor')
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.uniqueID);
+
+    this.service = this.accessory.getService(this.platform.Service.SmokeSensor) || this.accessory.addService(this.platform.Service.SmokeSensor);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+
+    this.platform.log.debug('Smoke Sensor created: ', accessory.context.device.displayName);
+  }
+
+}
+
 export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 

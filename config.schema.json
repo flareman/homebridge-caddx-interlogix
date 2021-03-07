@@ -46,6 +46,13 @@
         "maximum": 5000,
         "description": "Delay in ms between poll requests to the panel for status updates"
       },
+      "ignoreZones": {
+        "title": "Zones to be ignored",
+        "type": "string",
+        "required": false,
+        "description": "Specifies which zones should be ignored; zone indexes can be separated by commas. Ranges are allowed as well using a dash.",
+        "pattern": "^\\d{1,3}(?:-\\d{1,3})?(?:,\\d{1,3}(?:-\\d{1,3})?)*$"
+      },
       "override": {
         "title": "Zone Overrides",
         "type": "array",
@@ -61,12 +68,12 @@
               "description": "The override name for this zone (or left blank if you want to retain the original name)"
             },
             "sensor": {
-              "title": "Zone type (Contact or Radar)",
+              "title": "Zone type (Contact, Smoke or Radar)",
               "type": "string",
-              "enum": ["Contact", "Radar"],
+              "enum": ["Contact", "Radar", "Smoke"],
               "required": true,
               "default": "Contact",
-              "description": "The type of this zone sensor, namely \"Contact\" sensor or motion \"Radar\""
+              "description": "The type of this zone sensor, namely \"Contact\" sensor, \"Smoke\" sensor, or motion \"Radar\""
             }
           }
         },
