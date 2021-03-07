@@ -36,6 +36,14 @@
         "format": "ipv4",
         "description": "The alarm panel IP address (should be set as static)"
       },
+      "displayBypassSwitches" : {
+        "title": "Display zone bypass switches",
+        "type": "boolean",
+        "required": false,
+        "placeholder": true,
+        "default": true,
+        "description": "Whether zone sensors will also expose a switch for bypassing"
+      },
       "pollTimer" : {
         "title": "Poll delay (in ms)",
         "type": "integer",

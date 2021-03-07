@@ -8,6 +8,7 @@
       "ip" : "192.168.1.1",
       "pollTimer" : 500,
       "ignoreZones": "8,10-12,24-36,45",
+      "displayBypassSwitches": false,
       "override" : [
         {"index": 1, "name": "Front Door", "sensor": "Contact"},
         {"index": 2, "name": "Living Room Window", "sensor": "Contact"},

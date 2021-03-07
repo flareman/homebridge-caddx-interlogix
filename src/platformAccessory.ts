@@ -111,17 +111,27 @@ export class NX595EPlatformSecurityAreaAccessory {
 }
 
 class NX595EPlatformSensorAccessory {
-  private bypassService: Service;
+  private bypassService: Service | undefined = undefined;
 
   constructor(
     protected readonly platform: NX595EPlatform,
     protected readonly accessory: PlatformAccessory,
+    protected readonly displayBypassSwitches: Boolean
   ) {
-    this.bypassService = this.accessory.getService(this.platform.Service.Switch) || this.accessory.addService(this.platform.Service.Switch);
-
-    this.bypassService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Bypass");
-    this.bypassService.getCharacteristic(this.platform.Characteristic.On)!
-      .on('set', this.setBypassState.bind(this));
+    this.bypassService = this.accessory.getService(this.platform.Service.Switch);
+    if (displayBypassSwitches) {
+      if (this.bypassService == undefined) {
+        this.bypassService = this.accessory.addService(this.platform.Service.Switch);
+      }
+      this.bypassService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Bypass");
+      this.bypassService.getCharacteristic(this.platform.Characteristic.On)!
+        .on('set', this.setBypassState.bind(this));
+    } else {
+      if (this.bypassService) {
+        this.accessory.removeService(this.bypassService);
+        this.bypassService = undefined;
+      }
+    }
   }
 
   setBypassState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -147,8 +157,8 @@ class NX595EPlatformSensorAccessory {
 export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
-    super(platform, accessory);
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+    super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')
@@ -166,8 +176,8 @@ export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAc
 export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
-    super(platform, accessory);
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+    super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')
@@ -185,8 +195,8 @@ export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAcce
 export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory) {
-    super(platform, accessory);
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+    super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'CaddX')

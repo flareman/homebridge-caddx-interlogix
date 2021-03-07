@@ -24,6 +24,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private pollTimer: number;
   private areaDelta: number[] = [];
   private zoneDelta: number[] = [];
+  private displayBypassSwitches: Boolean = true;
 
   constructor(
     public readonly log: Logger,
@@ -34,6 +35,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     const pin = <string>this.config.pin;
     const ip = <string>this.config.ip;
     this.pollTimer = <number>this.config.pollTimer;
+    this.displayBypassSwitches = <Boolean>this.config.displayBypassSwitches;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin);
     this.log.debug('Finished initializing platform:', this.config.name);
 
@@ -77,19 +79,30 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
-            accService = accessory.getService(this.Service.Switch);
-            if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(zone.isBypassed);
-            if (accessory.context.device.type === "sensor")
-              if (accessory.context.device.isRadar) {
-                accService = accessory.getService(this.Service.MotionSensor);
-                if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
-              } else if (accessory.context.device.isSmokeSensor) {
-                accService = accessory.getService(this.Service.SmokeSensor);
-                if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
-              } else {
-                accService = accessory.getService(this.Service.ContactSensor);
-                if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(this.securitySystem.getZoneState(zone.bank));
+            if (accessory.context.device.type != DeviceType.area) {
+              if (this.displayBypassSwitches) {
+                accService = accessory.getService(this.Service.Switch);
+                if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(zone.isBypassed);
               }
+              switch (accessory.context.device.type) {
+                case DeviceType.radar: {
+                  accService = accessory.getService(this.Service.MotionSensor);
+                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  break;
+                }
+                case DeviceType.smoke: {
+                  accService = accessory.getService(this.Service.SmokeSensor);
+                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  break;
+                }
+                default:
+                case DeviceType.contact: {
+                  accService = accessory.getService(this.Service.ContactSensor);
+                  if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  break;
+                }
+              };
+            }
           });
         }
       }
@@ -101,7 +114,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === area.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
-            if (accessory.context.device.type === "area") {
+            if (accessory.context.device.type === DeviceType.area) {
               const status: string = this.securitySystem.getAreaStatus(area.bank);
               const chimeState: boolean = this.securitySystem.getAreaChimeStatus(area.bank);
               let value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
@@ -304,16 +317,16 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
                 break;
               }
               case DeviceType.radar: {
-                new NX595EPlatformRadarAccessory(this, existingAccessory);
+                new NX595EPlatformRadarAccessory(this, existingAccessory, this.displayBypassSwitches);
                 break;
               }
               case DeviceType.smoke: {
-                new NX595EPlatformSmokeSensorAccessory(this, existingAccessory);
+                new NX595EPlatformSmokeSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
                 break;
               }
               case DeviceType.contact:
               default: {
-                new NX595EPlatformContactSensorAccessory(this, existingAccessory);
+                new NX595EPlatformContactSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
                 break;
               }
             }
@@ -349,16 +362,16 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               break;
             }
             case DeviceType.radar: {
-              new NX595EPlatformRadarAccessory(this, accessory);
+              new NX595EPlatformRadarAccessory(this, accessory, this.displayBypassSwitches);
               break;
             }
             case DeviceType.smoke: {
-              new NX595EPlatformSmokeSensorAccessory(this, accessory);
+              new NX595EPlatformSmokeSensorAccessory(this, accessory, this.displayBypassSwitches);
               break;
             }
             case DeviceType.contact:
             default: {
-              new NX595EPlatformContactSensorAccessory(this, accessory);
+              new NX595EPlatformContactSensorAccessory(this, accessory, this.displayBypassSwitches);
               break;
             }
           }

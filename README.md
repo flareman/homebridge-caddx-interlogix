@@ -31,21 +31,35 @@ You need to set the following attributes:
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
 * `pollTimer` - this plugin works by asking the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
+* `displayBypassSwitches` - this option is optional and allows you to override the plugin's standard behavior and hide the bypass switches for zones. If not set, this defaults to true (see Usage below).
 * `ignoreZones` - this attribute allows the user to define certain zones that should be ignored. This is mostly necessary for older version of the network interface software (i.e. up to 0.106): newer versions denotate unused zones using "!", so we have a way of detecting those. In versions before 0.107 zone naming isn't supported, and the system reports all zones with "" names. In these cases, the user needs a way to indicate which zones the plugin should ignore, in order to avoid polluting the Homebridge/HomeKit interface with unused sensors. `ignoreZones` is defined as a string value containing comma-separated zone indexes up to 999. Zone ranges are also supported, using dashes. An example of a valid value would be `"2,4,6-8,24-36,45"`. Entries such as `-14`, `9999`, `2-4-6`, `1,--4,6`, or `6-3` are invalid. Likewise, zone indexes beyond the count determined by the system will also not be accepted.
 * `override` - this array of items allows the user to override the names and types of zone sensors. You can either set this manually in config.json, or use the Config UI X form for an easier time. For every zone that you want to override, you specify an array item with three properties: `index`, `name` and `sensor`. `index` determines the index of the zone to be overriden, and is mandatory; the zone index should exist, and in case the user sets more than one overrides for the same zone index, only the last one declared is taken into account. `name` is optional; if you define a name here, it will override the name that the plugin fetches from the network interface. `sensor` is mandatory and can be either "Contact" (which is the default), "Radar", or "Smoke", which designates the zone sensor as either a contact, motion, or smoke sensor. This does not affect the actual function or reporting of the sensor, but changes the way that it appears in Homebridge and HomeKit, which allows for more accurate Siri use and automating.
 
-
-A sample config.json platform entry would be:
+A bare minimum sample config.json platform entry would be:
 ```
 {
-  "platform" : "homebridge-caddx-interlogix",
-  "name" : "homebridge-caddx-interlogix",
-  "username" : "User 1",
-  "pin" : "1234",
-  "ip" : "192.168.1.1",
-  "pollTimer" : 500,
+  "platform": "homebridge-caddx-interlogix",
+  "name": "homebridge-caddx-interlogix",
+  "username": "User 1",
+  "pin": "1234",
+  "ip": "192.168.1.1",
+}
+```
+
+This example sets up the plugin with the default settings and requires as a minimum the IP address of the network interface, plus a user name and the access PIN for login.
+
+Another sample config.json platform entry would be:
+```
+{
+  "platform": "homebridge-caddx-interlogix",
+  "name": "homebridge-caddx-interlogix",
+  "username": "User 1",
+  "pin": "1234",
+  "ip": "192.168.1.1",
+  "pollTimer": 500,
+  "displayBypassSwitches": false,
   "ignoreZones": "8,10-12,24-36,45",
-  "override" : [
+  "override": [
     {"index": 1, "name": "Front Door", "sensor": "Contact"},
     {"index": 2, "name": "Living Room Window", "sensor": "Contact"},
     {"index": 5, "sensor": "Smoke"},
@@ -54,7 +68,7 @@ A sample config.json platform entry would be:
 }
 ```
 
-The example above defines the necessary parameters for connecting with the network interface, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 are ignored.
+The example above defines the necessary parameters for connecting with the network interface, removes bypass switches for sensors, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
 
 ## Usage
 
@@ -65,7 +79,7 @@ In detail, after the plugin has started up, you will have the following accessor
 1. Areas as security systems. Every area has its own security system switch in Homebridge, with Home, Away and Disarmed functionality. The plugin intelligently updates while the alarm system is arming, and will report likewise. In order to avoid mistakes, once an area is armed in either setting, it will not allow rearming until it has been disarmed.
 2. Along with every area's security system you will find included a "chime" switch. This allows you to enable/disable the alarm system's namesake function, which chimes whenever a contact sensor changes state.
 3. Contact, radar and smoke sensors will present as such, and - as stated above - will inherit the names you have set in your web interface. Radars and smoke sensors will initally present as contact sensors. Activity is reported momentarily when the sensor detects it, but that is enough for any automations you want to script. If you want the sensor to actually register as a motion or smoke sensor, then you have to add an entry to the override array (see above), to specify which zone should appear as such.
-5. Every zone sensor has a "bypass" switch included, which allows you to see or set the bypass state for a zone. Keep in mind that the plugin mimics the standard alarm control panel behavior: when an area is armed, the zone sensors bypass status can't be changed.
+5. Every zone sensor has a "bypass" switch included, which allows you to see or set the bypass state for a zone. Keep in mind that the plugin mimics the standard alarm control panel behavior: when an area is armed, the zone sensors bypass status can't be changed. By default, the switches are added, but you can use the `displayBypassSwitches` option to override this.
 
 Feel free to assign your accessories to the rooms of your house as they really are, it helps with automating.
 
@@ -88,6 +102,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.1.3 Added option to display bypass switches for sensors
 * 1.1.2 Lint error fix at platform.ts
 * 1.1.1 Fixed zone ignoring bug; added override zone index option and automatic accessory pruning for changed sensor types and removed sensors
 * 1.1.0 Added zone ignoring capability; added smoke sensor override option
