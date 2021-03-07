@@ -88,6 +88,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.1.2 Lint error fix at platform.ts
 * 1.1.1 Fixed zone ignoring bug; added override zone index option and automatic accessory pruning for changed sensor types and removed sensors
 * 1.1.0 Added zone ignoring capability; added smoke sensor override option
 * 1.0.15 Removed unnamed zones pruning from core logic for versions up to 0.106

@@ -254,7 +254,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
           default: {
             break;
           }
-        };
+        }
       }
       devices.push({
         type: deviceType,
