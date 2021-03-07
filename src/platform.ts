@@ -101,7 +101,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
                   if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(this.securitySystem.getZoneState(zone.bank));
                   break;
                 }
-              };
+              }
             }
           });
         }

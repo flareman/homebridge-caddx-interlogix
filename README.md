@@ -102,7 +102,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
-* 1.1.3 Added option to display bypass switches for sensors
+* 1.1.3-1.1.4 Added option to display bypass switches for sensors
 * 1.1.2 Lint error fix at platform.ts
 * 1.1.1 Fixed zone ignoring bug; added override zone index option and automatic accessory pruning for changed sensor types and removed sensors
 * 1.1.0 Added zone ignoring capability; added smoke sensor override option
