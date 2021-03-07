@@ -61,6 +61,12 @@
         "items": {
           "type": "object",
           "properties": {
+            "index": {
+              "title": "Zone index",
+              "type": "number",
+              "required": true,
+              "description": "The index of the specified zone to override (must be valid; when multiple overrides are set for the same zone index, only the last one will be used)"
+            },
             "name": {
               "title": "Zone name",
               "type": "string",

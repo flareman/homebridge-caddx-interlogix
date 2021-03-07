@@ -180,3 +180,10 @@ export class ZoneState {
     'Antimask'
   ]
 }
+
+export enum DeviceType {
+  area = "area",
+  contact = "contact",
+  radar = "radar",
+  smoke = "smoke"
+}

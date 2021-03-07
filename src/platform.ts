@@ -7,6 +7,7 @@ import { NX595EPlatformContactSensorAccessory } from './platformAccessory';
 import { NX595EPlatformSmokeSensorAccessory } from './platformAccessory';
 import { NX595EPlatformRadarAccessory } from './platformAccessory';
 import { AreaState } from './definitions';
+import { DeviceType } from './definitions';
 
 /**
  * HomebridgePlatform
@@ -164,17 +165,14 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.securitySystem.getAreas().forEach(area => {
       this.log.debug('Detected area: ', area.name);
       devices.push({
-        type: "area",
+        type: DeviceType.area,
         uniqueID: area.bank + '#' + area.name,
         bank: area.bank,
+        bank_state: area.bank_state,
         displayName: area.name,
         firmwareVersion: this.securitySystem.getFirmwareVersion()
       });
     });
-
-    // Get override zones table from configuration
-    const overrides = (this.config.override) ? this.config.override : [];
-    const hasOverride = (overrides && overrides.length) ? true : false;
 
     // Populate ignore zones table from configuration
     // Zone ignoring should be declared in plugin config as a string of numbers
@@ -197,6 +195,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               throw new Error("Zone " + element + " required to ignore exceeds zone count!");
             } else {
               ignores[ignoreIndex-1] = true;
+              this.log.debug('Zone ', ignoreIndex, ' ignored');
             }
           } else {
             const ignoreRange = element.split('-');
@@ -205,12 +204,14 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
             if (rangeStart > ignores.length || rangeEnd > ignores.length) {
               throw new Error("Zone range " + element + " required to ignore violates zone count!");
             } else {
+              this.log.debug('Ignoring zone range: ', rangeStart, '-', rangeEnd);
               const rangeDiff = rangeEnd - rangeStart;
               if (rangeDiff <= 0) {
                 throw new Error("Zone ranges should be declared from lower to higer zone index (zone range was: " + element + ")!");
               } else {
-                for (let i = rangeStart; rangeEnd; i++) {
+                for (let i = rangeStart; i <= rangeEnd; i++) {
                   ignores[i-1] = true;
+                  this.log.debug('Zone ', i, ' ignored');
                 }
               }
             }
@@ -221,21 +222,49 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       }
     }
 
+    // Get override zones table from configuration
+    // Overrides have a zone index specified; in case the user has declared
+    // multiple overrides for the same zone index, only the last one applies
+    const declaredOverrides = (this.config.override) ? this.config.override : [];
+    let overrides: any[] = new Array(ignores.length).fill(undefined);
+    declaredOverrides.forEach(element => {
+      if (element.index < 1 || element.index > overrides.length) {
+        throw new Error("Override declared for non-existent zone with index " + element.index + "!");
+      }
+      overrides[element.index-1] = element;
+    });
+
     this.securitySystem.getZones().forEach(zone => {
       if (zone == undefined) return;
-      if (ignores[zone.bank]) return;
-      const shouldOverride = (hasOverride && zone.bank < overrides.length) ? true : false;
+      const shouldOverride = (overrides[zone.bank] != undefined) ? true : false;
       const zoneName = (shouldOverride && overrides[zone.bank].name && overrides[zone.bank].name !== "") ? overrides[zone.bank].name : zone.name;
       this.log.debug('Detected zone: ', zone.name);
+      let deviceType: DeviceType = DeviceType.contact;
+      if (shouldOverride) {
+        switch (overrides[zone.bank].sensor) {
+          case "Radar": {
+            deviceType = DeviceType.radar;
+            break;
+          }
+          case "Smoke": {
+            deviceType = DeviceType.smoke;
+            break;
+          }
+          case "Contact":
+          default: {
+            break;
+          }
+        };
+      }
       devices.push({
-        type: "sensor",
+        type: deviceType,
         uniqueID: zone.bank + '#' + zone.name,
         bank: zone.bank,
         associatedArea: zone.associatedArea,
         bank_state: this.securitySystem.getZoneBankState(zone.bank),
         displayName: zoneName,
-        isRadar: (shouldOverride) ? ((overrides[zone.bank].sensor === "Radar") ? true: false) : false,
-        isSmokeSensor: (shouldOverride) ? ((overrides[zone.bank].sensor === "Smoke") ? true: false) : false
+        firmwareVersion: this.securitySystem.getFirmwareVersion(),
+        shouldIgnore: ignores[zone.bank]
       });
     });
 
@@ -252,11 +281,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       // the cached devices we stored in the `configureAccessory` method above
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
-      if (existingAccessory) {
+      if (existingAccessory && device.type == existingAccessory.context.device.type) {
         // the accessory already exists
         if (device) {
-          this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-
           // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
           // existingAccessory.context.device = device;
           // this.api.updatePlatformAccessories([existingAccessory]);
@@ -264,30 +291,48 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
           // create the accessory handler for the restored accessory
           // this is imported from `platformAccessory.ts`
 
-          existingAccessory.context.device = device;
-          if (device.type === "area")
-            new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
-          else if (device.type === "sensor") {
+          if (device.type != DeviceType.area && device.shouldIgnore) {
+            this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+          } else {
+            this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+            existingAccessory.context.device = device;
             this.log.debug(device.bank_state);
-            if (device.isRadar)
-              new NX595EPlatformRadarAccessory(this, existingAccessory);
-            else if (device.isSmokeSensor)
-              new NX595EPlatformSmokeSensorAccessory(this, existingAccessory);
-            else new NX595EPlatformContactSensorAccessory(this, existingAccessory);
+            switch (device.type) {
+              case DeviceType.area: {
+                new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
+                break;
+              }
+              case DeviceType.radar: {
+                new NX595EPlatformRadarAccessory(this, existingAccessory);
+                break;
+              }
+              case DeviceType.smoke: {
+                new NX595EPlatformSmokeSensorAccessory(this, existingAccessory);
+                break;
+              }
+              case DeviceType.contact:
+              default: {
+                new NX595EPlatformContactSensorAccessory(this, existingAccessory);
+                break;
+              }
+            }
+
+            // update accessory cache with any changes to the accessory details and information
+            this.api.updatePlatformAccessories([existingAccessory]);
           }
-          // update accessory cache with any changes to the accessory details and information
-          this.api.updatePlatformAccessories([existingAccessory]);
         } else if (!device) {
           // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
           // remove platform accessories when no longer present
-          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
           this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
         }
       } else {
+        if (existingAccessory) {
+          this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+        }
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.displayName);
-        this.log.debug(device.bank_state);
-
         // create a new accessory
         const accessory = new this.api.platformAccessory(device.displayName, uuid);
 
@@ -297,19 +342,33 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        if (device.type === "area")
-          new NX595EPlatformSecurityAreaAccessory(this, accessory, this.securitySystem);
-        else if (device.type === "sensor")
-          if (device.isRadar)
-            new NX595EPlatformRadarAccessory(this, accessory);
-          else if (device.isSmokeSensor)
-            new NX595EPlatformSmokeSensorAccessory(this, accessory);
-          else new NX595EPlatformContactSensorAccessory(this, accessory);
+        if (device.type == DeviceType.area || device.shouldIgnore == false) {
+          switch (device.type) {
+            case DeviceType.area: {
+              new NX595EPlatformSecurityAreaAccessory(this, accessory, this.securitySystem);
+              break;
+            }
+            case DeviceType.radar: {
+              new NX595EPlatformRadarAccessory(this, accessory);
+              break;
+            }
+            case DeviceType.smoke: {
+              new NX595EPlatformSmokeSensorAccessory(this, accessory);
+              break;
+            }
+            case DeviceType.contact:
+            default: {
+              new NX595EPlatformContactSensorAccessory(this, accessory);
+              break;
+            }
+          }
 
-        // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          // link the accessory to your platform
+          this.log.info('Adding new accessory:', device.displayName);
+          this.log.debug(device.bank_state);
+          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        }
       }
     }
-    this.accessories
   }
 }

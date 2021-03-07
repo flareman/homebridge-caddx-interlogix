@@ -7,15 +7,12 @@
       "pin" : "1234",
       "ip" : "192.168.1.1",
       "pollTimer" : 500,
-      "ignoreZones": "2,4,6-8,24-36,45",
+      "ignoreZones": "8,10-12,24-36,45",
       "override" : [
-        {"name": "Front Door", "sensor": "Contact"},
-        {"name": "Living Room Window", "sensor": "Contact"},
-        {"sensor": "Contact"},
-        {"sensor": "Contact"},
-        {"sensor": "Radar"},
-        {"sensor": "Contact"},
-        {"name": "Hallway Radar", "sensor": "Radar"}
+        {"index": 1, "name": "Front Door", "sensor": "Contact"},
+        {"index": 2, "name": "Living Room Window", "sensor": "Contact"},
+        {"index": 5, "sensor": "Smoke"},
+        {"index": 7, "name": "Hallway Radar", "sensor": "Radar"}
       ],
       "description": "This is a sample config.json file, just to illustrate the necessary configuration for the plugin"
     }
