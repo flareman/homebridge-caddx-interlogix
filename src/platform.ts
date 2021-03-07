@@ -22,9 +22,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   public readonly accessories: PlatformAccessory[] = [];
   securitySystem: NX595ESecuritySystem;
   private pollTimer: number;
-  private areaDelta: number[] = [];
-  private zoneDelta: number[] = [];
-  private displayBypassSwitches: Boolean = true;
+  private areaSequences: number[] = [];
+  private zoneSequences: number[] = [];
+  private zoneDeltas: number[] = [];
+  private radarPersistence: number = 60000;
+  private smokePersistence: number = 60000;
+  private displayBypassSwitches: Boolean = false;
 
   constructor(
     public readonly log: Logger,
@@ -35,7 +38,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     const pin = <string>this.config.pin;
     const ip = <string>this.config.ip;
     this.pollTimer = <number>this.config.pollTimer;
-    this.displayBypassSwitches = <Boolean>this.config.displayBypassSwitches;
+    this.displayBypassSwitches = (this.config.displayBypassSwitches)? <Boolean>this.config.displayBypassSwitches: false;
+    this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
+    this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin);
     this.log.debug('Finished initializing platform:', this.config.name);
 
@@ -48,10 +53,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       // run the method to discover / register your devices as accessories
       this.securitySystem.login().then(() => {
         this.discoverDevices();
-        this.areaDelta = new Array(this.securitySystem.getAreas().length);
-        this.zoneDelta = new Array(this.securitySystem.getZones().length);
-        this.areaDelta.fill(-1);
-        this.zoneDelta.fill(-1);
+        this.areaSequences = new Array(this.securitySystem.getAreas().length);
+        this.zoneSequences = new Array(this.securitySystem.getZones().length);
+        this.zoneDeltas = new Array(this.securitySystem.getZones().length);
+        this.areaSequences.fill(-1);
+        this.zoneSequences.fill(-1);
+        this.zoneDeltas.fill(-1);
         setTimeout(this.updateAccessories.bind(this), this.pollTimer);
       });
     });
@@ -74,9 +81,10 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
     this.securitySystem.getZones().forEach(zone => {
       if (zone == undefined) return;
-      if (this.zoneDelta[zone.bank] !== zone.sequence) {
-        this.zoneDelta[zone.bank] = zone.sequence;
-        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
+      const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
+      const zoneStatus = this.securitySystem.getZoneState(zone.bank);
+      if (this.zoneSequences[zone.bank] !== zone.sequence) {
+        this.zoneSequences[zone.bank] = zone.sequence;
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
             if (accessory.context.device.type != DeviceType.area) {
@@ -86,19 +94,23 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               }
               switch (accessory.context.device.type) {
                 case DeviceType.radar: {
-                  accService = accessory.getService(this.Service.MotionSensor);
-                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  if (zoneStatus) {
+                    this.log.debug('Persistence updated for zone ', zone.bank);
+                    this.zoneDeltas[zone.bank] = Date.now();
+                  }
                   break;
                 }
                 case DeviceType.smoke: {
-                  accService = accessory.getService(this.Service.SmokeSensor);
-                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  if (zoneStatus) {
+                    this.log.debug('Persistence updated for zone ', zone.bank);
+                    this.zoneDeltas[zone.bank] = Date.now();
+                  }
                   break;
                 }
                 default:
                 case DeviceType.contact: {
                   accService = accessory.getService(this.Service.ContactSensor);
-                  if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(this.securitySystem.getZoneState(zone.bank));
+                  if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(zoneStatus);
                   break;
                 }
               }
@@ -106,11 +118,44 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
           });
         }
       }
+
+      if (accessoriesUpdated.length) {
+        accessoriesUpdated.forEach(accessory => {
+          if (accessory.context.device.type != DeviceType.area) {
+            const currentDelta = Date.now() - this.zoneDeltas[zone.bank];
+            switch (accessory.context.device.type) {
+              case DeviceType.radar: {
+                accService = accessory.getService(this.Service.MotionSensor);
+                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.radarPersistence) {
+                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(true);
+                } else {
+                  this.zoneDeltas[zone.bank] = -1;
+                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(false);
+                }
+                break;
+              }
+              case DeviceType.smoke: {
+                accService = accessory.getService(this.Service.SmokeSensor);
+                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.radarPersistence) {
+                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(true);
+                } else {
+                  this.zoneDeltas[zone.bank] = -1;
+                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(false);
+                }
+                break;
+              }
+              default: {
+                break;
+              }
+            }
+          }
+        });
+      }
     });
 
     this.securitySystem.getAreas().forEach(area => {
-      if (this.areaDelta[area.bank] !== area.sequence) {
-        this.areaDelta[area.bank] = area.sequence;
+      if (this.areaSequences[area.bank] !== area.sequence) {
+        this.areaSequences[area.bank] = area.sequence;
         const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === area.bank);
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {

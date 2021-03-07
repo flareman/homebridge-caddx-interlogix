@@ -54,6 +54,26 @@
         "maximum": 5000,
         "description": "Delay in ms between poll requests to the panel for status updates"
       },
+      "radarPersistence" : {
+        "title": "Radar sensor persistence (in ms)",
+        "type": "integer",
+        "required": false,
+        "placeholder": 60000,
+        "default": 60000,
+        "minimum": 500,
+        "maximum": 300000,
+        "description": "Time in milliseconds for which a radar will report motion after it fires (between 500 and 300,000 ms)"
+      },
+      "smokePersistence" : {
+        "title": "Smoke sensor persistence (in ms)",
+        "type": "integer",
+        "required": false,
+        "placeholder": 60000,
+        "default": 60000,
+        "minimum": 500,
+        "maximum": 300000,
+        "description": "Time in milliseconds for which a smoke sensor will report motion after it fires (between 500 and 300,000 ms)"
+      },
       "ignoreZones": {
         "title": "Zones to be ignored",
         "type": "string",
