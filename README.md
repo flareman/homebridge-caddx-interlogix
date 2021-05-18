@@ -105,6 +105,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.1.6 Fixed error in area state masking code; changed default value for radar bypass option; clarified alarm flags
 * 1.1.5 Added sensor persistence
 * 1.1.3-1.1.4 Added option to display bypass switches for sensors
 * 1.1.2 Lint error fix at platform.ts

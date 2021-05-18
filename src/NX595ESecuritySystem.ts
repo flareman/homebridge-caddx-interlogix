@@ -187,7 +187,6 @@ export class NX595ESecuritySystem {
       if (!response) throw new Error('Panel response returned as undefined');
     }
 
-
     // Get area sequence
     let regexMatch: any = response.text.match(/var\s+areaSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
     let sequence: number[] = regexMatch[1].split(',');
@@ -216,13 +215,14 @@ export class NX595ESecuritySystem {
       // If the name is "!" it's an empty area; ignore it
       if (name == "%21" || name == "!") return;
 
+      const startingState: number = Math.floor(i / 8) * 17;
       // Create a new Area object and populate it with the area details, then push it
       let newArea: Area = {
         bank: i,
         name: (name == "" ? 'Area ' + (i+1): name),
         priority: 6,
         sequence: sequence[i],
-        bank_state: bank_states.slice(Math.floor((i / 8) * 17), (Math.floor((i / 8) * 17) + 17)),
+        bank_state: bank_states.slice(startingState, startingState + 17),
         status: "",
         states: {}
       };
@@ -299,7 +299,7 @@ export class NX595ESecuritySystem {
           status = AreaState.Status[AreaState.State.NOT_READY];
         }
 
-        if (vbank[AreaBank.UNKWN_03] || vbank[AreaBank.UNKWN_04] || vbank[AreaBank.UNKWN_05] || vbank[AreaBank.UNKWN_06]) {
+        if (vbank[AreaBank.FIRE_ALARM] || vbank[AreaBank.BURGLAR_ALARM] || vbank[AreaBank.PANIC_ALARM] || vbank[AreaBank.MEDICAL_ALARM]) {
           priority = 1;
         } else if (vbank[AreaBank.UNKWN_11] || vbank[AreaBank.UNKWN_12] || vbank[AreaBank.UNKWN_13] || vbank[AreaBank.UNKWN_14] || this.__extra_area_status.length > 0) {
           priority = 2;
