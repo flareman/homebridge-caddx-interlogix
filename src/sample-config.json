@@ -6,6 +6,7 @@
       "username" : "User 1",
       "pin" : "1234",
       "ip" : "192.168.1.1",
+      "useHTTPS": false,
       "pollTimer" : 500,
       "ignoreZones": "8,10-12,24-36,45",
       "displayBypassSwitches": false,

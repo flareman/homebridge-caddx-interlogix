@@ -30,6 +30,7 @@ You need to set the following attributes:
 * `username` - this is the username you have set in your NX-595E web interface. It is advised that you create a user just for homebridge use, as logging in from another location will log you out on the plugin side of things
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
+* `useHTTPS` - this optional setting enables SSL connections to the network interface, for those that want to use it. Defaults to 'false'.
 * `pollTimer` - this plugin works by asking the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
 * `displayBypassSwitches` - this option is optional and allows you to override the plugin's standard behavior and hide the bypass switches for zones. If not set, this defaults to true (see Usage below).
 * `radarPersistence` and `smokePersistence` - these two settings are optional, and they allow to modify the time in milliseconds for which a radar or smoke sensor will remain triggered after the actual event. The default behavior is 60000 ms (or one minute) for both.
@@ -58,6 +59,7 @@ Another sample config.json platform entry would be:
   "username": "User 1",
   "pin": "1234",
   "ip": "192.168.1.1",
+  "useHTTPS": true,
   "pollTimer": 500,
   "displayBypassSwitches": false,
   "radarPersistence": 20000,
@@ -72,7 +74,7 @@ Another sample config.json platform entry would be:
 }
 ```
 
-The example above defines the necessary parameters for connecting with the network interface, removes bypass switches for sensors, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
+The example above defines the necessary parameters for connecting with the network interface, enables SSL connections with it, removes bypass switches for sensors, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
 
 ## Usage
 
@@ -103,8 +105,11 @@ There are a few kinks that need ironing out, namely:
 ## Ideas for improvement/expansion
 2. I would like to add the option for night arming, i.e. home arming with immediate alarm triggering when the front door contact fires. HomeKit/HomeBridge offers this capability, but the network interface code (which was used for reverse engineering this plugin) does not include a clear command for this. It might be possible, but it requires testing different command codes to find the proper one, which - even if such a command exists - is essentially trial-and-error, and very time consuming.
 
+3. Some people use several components in their security setup, which are not necessarily part of the CaddX line (i.e. separate Aqara window vibration sensors). I would like to look into the ability to manually fire an alarm, so that these people can set their own alarm rules in HomeKit.
+
 ## Changelog
 
+* 1.1.7 Added SSL support
 * 1.1.6 Fixed error in area state masking code; changed default value for radar bypass option; clarified alarm flags
 * 1.1.5 Added sensor persistence
 * 1.1.3-1.1.4 Added option to display bypass switches for sensors

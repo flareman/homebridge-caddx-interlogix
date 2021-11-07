@@ -36,11 +36,19 @@
         "format": "ipv4",
         "description": "The alarm panel IP address (should be set as static)"
       },
+      "useHTTPS" : {
+        "title": "Use https:// (SSL)",
+        "type": "boolean",
+        "required": false,
+        "placeholder": false,
+        "default": false,
+        "description": "Use https:// prefix (SSL) instead of standard http:// for communicating with the network module"
+      },
       "displayBypassSwitches" : {
         "title": "Display zone bypass switches",
         "type": "boolean",
         "required": false,
-        "placeholder": true,
+        "placeholder": false,
         "default": false,
         "description": "Whether zone sensors will also expose a switch for bypassing"
       },

@@ -28,6 +28,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private radarPersistence: number = 60000;
   private smokePersistence: number = 60000;
   private displayBypassSwitches: Boolean = false;
+  private useHTTPS: Boolean = false;
 
   constructor(
     public readonly log: Logger,
@@ -40,8 +41,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.pollTimer = <number>this.config.pollTimer;
     this.displayBypassSwitches = (this.config.displayBypassSwitches)? <Boolean>this.config.displayBypassSwitches: false;
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
+    this.useHTTPS = (this.config.useHTTPS)?this.config.useHTTPS:false;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
-    this.securitySystem = new NX595ESecuritySystem(ip, username, pin);
+    this.securitySystem = new NX595ESecuritySystem(ip, username, pin, this.useHTTPS);
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.

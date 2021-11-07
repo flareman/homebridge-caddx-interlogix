@@ -16,6 +16,7 @@ export class NX595ESecuritySystem {
   protected username: string;
   protected passcode: string;
   protected IPAddress: string;
+  protected httpPrefix: string;
 
   protected sessionID = '';
   protected vendor: Vendor = Vendor.UNDEFINED;
@@ -34,7 +35,7 @@ export class NX595ESecuritySystem {
   protected zonesBank: number[][] = [];
   protected _zvbank: number[][] = [];
 
-  constructor(address: string, userid: string, pin: string) {
+  constructor(address: string, userid: string, pin: string, useHTTPS: Boolean = false) {
     if (Utilities.CheckIPAddress(address)) {
       this.IPAddress = address;
     } else { throw new Error('Not a valid IP address'); }
@@ -44,13 +45,15 @@ export class NX595ESecuritySystem {
 
     if (typeof pin!='undefined' && pin) { this.passcode = pin; }
     else { throw new Error('Did not specify a user PIN'); }
+
+    this.httpPrefix = (useHTTPS)?'https://':'http://';
   }
 
   async login() {
     try {
       // Attempting login
       let payload = ({lgname: this.username, lgpin: this.passcode});
-      const response = await this.makeRequest('http://' + this.IPAddress + '/login.cgi', payload, false);
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/login.cgi', payload, false);
       let correctLine: string = "";
       const loginPageLine: number = 25;
       const sessionIDLine: number = 28;
@@ -94,7 +97,7 @@ export class NX595ESecuritySystem {
         throw new Error('Not logged in');
 
       // Logout gracefully
-      await this.makeRequest('http://' + this.IPAddress + '/logout.cgi', {}, true, true);
+      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {}, true, true);
       this.sessionID = "";
     } catch (error) { console.error(error); return (false); }
   }
@@ -129,7 +132,7 @@ export class NX595ESecuritySystem {
           payload['data2'] = String(command);
 
           // Finally make the request
-          await this.makeRequest('http://' + this.IPAddress + '/user/keyfunction.cgi', payload);
+          await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/keyfunction.cgi', payload);
         }
       }
       return true;
@@ -169,7 +172,7 @@ export class NX595ESecuritySystem {
           // payload['data1'] = String(command);
 
           // Finally make the request
-          await this.makeRequest('http://' + this.IPAddress + '/user/zonefunction.cgi', payload);
+          await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zonefunction.cgi', payload);
         }
       }
       return true;
@@ -183,7 +186,7 @@ export class NX595ESecuritySystem {
     }
     // If we are passed an already loaded Response use that, otherwise reload area.htm
     if (response == undefined) {
-      response = await this.makeRequest('http://' + this.IPAddress + '/user/area.htm', {'sess': this.sessionID})
+      response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/area.htm', {'sess': this.sessionID})
       if (!response) throw new Error('Panel response returned as undefined');
     }
 
@@ -334,7 +337,7 @@ export class NX595ESecuritySystem {
     }
 
     // Retrieve zones.htm for parsing
-    const response = await this.makeRequest('http://' + this.IPAddress + '/user/zones.htm', {'sess': this.sessionID})
+    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zones.htm', {'sess': this.sessionID})
 
     // Get Zone sequences from response and store in class instance
     let regexMatch: any = response.text.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
@@ -466,7 +469,7 @@ export class NX595ESecuritySystem {
       return false;
     }
 
-    const response = await this.makeRequest('http://' + this.IPAddress + '/user/seq.xml', {'sess': this.sessionID});
+    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/seq.xml', {'sess': this.sessionID});
     const json = parser.parse(response.text)['response'];
     const seqResponse: SequenceResponse = {
       areas: typeof(json['areas']) == 'number'? [json['areas']]: json['areas'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number),
@@ -512,7 +515,7 @@ export class NX595ESecuritySystem {
     }
 
     // Fetch zone update
-    const response = await this.makeRequest('http://' + this.IPAddress + '/user/zstate.xml', {'sess': this.sessionID, 'state': bank});
+    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zstate.xml', {'sess': this.sessionID, 'state': bank});
     const json = parser.parse(response.text)['response'];
     const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
     this.zonesBank[bank] = zdat;
@@ -527,7 +530,7 @@ export class NX595ESecuritySystem {
     }
 
     // Fetch area update
-    const response = await this.makeRequest('http://' + this.IPAddress + '/user/status.xml', {'sess': this.sessionID, 'arsel': bank});
+    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/status.xml', {'sess': this.sessionID, 'arsel': bank});
     const json = parser.parse(response.text)['response'];
     if (json.hasOwnProperty('sysflt')) this.__extra_area_status = json['sysflt'].split('\n');
     else this.__extra_area_status = [];
