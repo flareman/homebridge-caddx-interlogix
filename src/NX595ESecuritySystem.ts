@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 require('tls').DEFAULT_MIN_VERSION = 'TLSv1';
 import * as Utilities from './utility';
 import * as superagent from 'superagent';

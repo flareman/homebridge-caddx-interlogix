@@ -1,4 +1,4 @@
-import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
+import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
 import { NX595EPlatform } from './platform';
 import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
@@ -54,7 +54,7 @@ export class NX595EPlatformSecurityAreaAccessory {
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
-  setTargetState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  setTargetState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
     const current = this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemCurrentState).value;
     const isNotReady = (this.securitySystem.getAreaStatus(this.accessory.context.device.bank) === AreaState.Status[AreaState.State.NOT_READY]) ? true : false;
@@ -93,7 +93,7 @@ export class NX595EPlatformSecurityAreaAccessory {
     this.platform.log.debug('Set Alarm State Characteristic On ->', value);
   }
 
-  setChimeState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  setChimeState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
     this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
 
@@ -160,7 +160,7 @@ class NX595EPlatformSensorAccessory {
     }
   }
 
-  setBypassState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  setBypassState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
 
     // const isArmed = this.platform.securitySystem.getAreaArmStatus(this.accessory.context.device.associatedArea);
