@@ -29,7 +29,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private radarPersistence: number = 60000;
   private smokePersistence: number = 60000;
   private displayBypassSwitches: Boolean = false;
-  private displayOutputSwitches: Boolean = true;
+  private displayOutputSwitches: Boolean = false;
   private useHTTPS: Boolean = false;
 
   constructor(
@@ -42,6 +42,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     const ip = <string>this.config.ip;
     this.pollTimer = <number>this.config.pollTimer;
     this.displayBypassSwitches = (this.config.displayBypassSwitches)? <Boolean>this.config.displayBypassSwitches: false;
+    this.displayOutputSwitches = (this.config.displayOutputSwitches)? <Boolean>this.config.displayOutputSwitches: false;
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
     this.useHTTPS = (this.config.useHTTPS)?this.config.useHTTPS:false;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
@@ -224,19 +225,18 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     let devices: Object[];
     devices = [];
 
-    if (this.displayOutputSwitches) {
-      this.securitySystem.getOutputs().forEach(output => {
-        this.log.debug('Detected output: ', output.name);
-        devices.push({
-          type: DeviceType.output,
-          uniqueID: output.bank + '#' + output.name,
-          bank: output.bank,
-          bank_state: output.status,
-          displayName: output.name,
-          firmwareVersion: this.securitySystem.getFirmwareVersion()
-        });
+    this.securitySystem.getOutputs().forEach(output => {
+      this.log.debug('Detected output: ', output.name);
+      devices.push({
+        type: DeviceType.output,
+        uniqueID: output.bank + '#' + output.name,
+        bank: output.bank,
+        bank_state: output.status,
+        displayName: output.name,
+        firmwareVersion: this.securitySystem.getFirmwareVersion(),
+        shouldIgnore: (this.displayOutputSwitches)?false:true
       });
-    }
+    });
 
     this.securitySystem.getAreas().forEach(area => {
       this.log.debug('Detected area: ', area.name);
@@ -246,7 +246,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         bank: area.bank,
         bank_state: area.bank_state,
         displayName: area.name,
-        firmwareVersion: this.securitySystem.getFirmwareVersion()
+        firmwareVersion: this.securitySystem.getFirmwareVersion(),
       });
     });
 

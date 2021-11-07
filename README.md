@@ -87,7 +87,8 @@ In detail, after the plugin has started up, you will have the following accessor
 1. Areas as security systems. Every area has its own security system switch in Homebridge, with Home, Away and Disarmed functionality. The plugin intelligently updates while the alarm system is arming, and will report likewise. In order to avoid mistakes, once an area is armed in either setting, it will not allow rearming until it has been disarmed.
 2. Along with every area's security system you will find included a "chime" switch. This allows you to enable/disable the alarm system's namesake function, which chimes whenever a contact sensor changes state.
 3. Contact, radar and smoke sensors will present as such, and - as stated above - will inherit the names you have set in your web interface. Radars and smoke sensors will initially present as contact sensors. Activity is reported momentarily when the sensor detects it, but that is enough for any automations you want to script. If you want the sensor to actually register as a motion or smoke sensor, then you have to add an entry to the override array (see above), to specify which zone should appear as such.
-5. Every zone sensor has a "bypass" switch included, which allows you to see or set the bypass state for a zone. Keep in mind that the plugin mimics the standard alarm control panel behavior: when an area is armed, the zone sensors bypass status can't be changed. By default, the switches are added, but you can use the `displayBypassSwitches` option to override this.
+5. Every zone sensor has a "bypass" switch included, which allows you to see or set the bypass state for a zone. Keep in mind that the plugin mimics the standard alarm control panel behavior: when an area is armed, the zone sensors bypass status can't be changed. By default, the switches are hidden, but you can use the `displayBypassSwitches` option to override this.
+6. Output relays can be exposed as switches to Homebridge, so you can control those through HomeKit, if you are using them in your setup. The default behavior is disabled, but you can set the `displayOutputSwitches` to `true` to enable these.
 
 Feel free to assign your accessories to the rooms of your house as they really are, it helps with automating.
 
@@ -111,6 +112,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.1.9 Added output relay control option in config.json; README.md description for output relay switches
 * 1.1.8 Added output relay control; set requirement for TLSv1 for SSL connections
 * 1.1.7 Added SSL support
 * 1.1.6 Fixed error in area state masking code; changed default value for radar bypass option; clarified alarm flags

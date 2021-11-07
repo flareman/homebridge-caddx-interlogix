@@ -10,6 +10,7 @@
       "pollTimer" : 500,
       "ignoreZones": "8,10-12,24-36,45",
       "displayBypassSwitches": false,
+      "displayOutputSwitches": false,
       "radarPersistence": 20000,
       "smokePersistence": 180000,
       "override" : [
