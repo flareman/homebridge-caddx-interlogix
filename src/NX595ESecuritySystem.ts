@@ -1,16 +1,17 @@
+require('tls').DEFAULT_MIN_VERSION = 'TLSv1';
 import * as Utilities from './utility';
 import * as superagent from 'superagent';
 import * as parser from 'fast-xml-parser';
 import { Vendor } from './definitions';
 import { Area } from './definitions';
 import { Zone } from './definitions';
+import { Output } from './definitions';
 import { SequenceResponse } from './definitions';
 import { AreaBank } from './definitions';
 import { AreaState } from './definitions';
 import { ZoneState } from './definitions';
 import { SecuritySystemAreaCommand } from './definitions';
 import { SecuritySystemZoneCommand } from './definitions';
-
 
 export class NX595ESecuritySystem {
   protected username: string;
@@ -29,6 +30,7 @@ export class NX595ESecuritySystem {
   protected lastUpdate: Date = new Date();
   protected areas: Area[] = [];
   protected zones: Zone[] = [];
+  protected outputs: Output[] = [];
   protected zoneNameCount: number = 0;
   protected __extra_area_status: string[] = [];
   protected zonesSequence: number[] = [];
@@ -87,6 +89,8 @@ export class NX595ESecuritySystem {
       // Start retrieving area and zone details; pass through the initial Response
       await this.retrieveAreas(response);
       await this.retrieveZones();
+      await this.retrieveOutputs();
+
       return (true);
     } catch (error) { console.error(error); return (false); }
   }
@@ -135,6 +139,26 @@ export class NX595ESecuritySystem {
           await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/keyfunction.cgi', payload);
         }
       }
+      return true;
+    } catch (error) { console.error(error); return false; }
+  }
+
+  async sendOutputCommand(command: Boolean, output: number) {
+    try {
+      if (this.sessionID === "" && !(this.login())) return (false);
+
+      if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
+
+      // Prepare the payload according to details
+      type payloadType = {[key: string]: string};
+      let payload: payloadType = {};
+      payload['sess'] = this.sessionID;
+      payload['onum'] = String(output+1);
+      payload['ostate'] = (command)?"1":"0";
+
+      // Finally make the request
+      await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/output.cgi', payload);
+
       return true;
     } catch (error) { console.error(error); return false; }
   }
@@ -234,6 +258,44 @@ export class NX595ESecuritySystem {
     });
 
     this.processAreas();
+
+    return (true);
+  }
+
+  private async retrieveOutputs (response: superagent.Response | undefined = undefined) {
+    if (this.sessionID == "") {
+      console.log('Could not retrieve areas; not logged in');
+      return false;
+    }
+    // If we are passed an already loaded Response use that, otherwise reload outputs.htm
+    if (response == undefined) {
+      response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outputs.htm', {'sess': this.sessionID})
+      if (!response) throw new Error('Panel response returned as undefined');
+    }
+
+    // Reset class outputs tables...
+    this.outputs.length = 0;
+
+    // Get output names
+    let regexMatch: any = response.text.matchAll(/var\s+oname\d+\s+=\s+decodeURIComponent\s*\(\s*decode_utf8\s*\(\s*\"(.*)\"\)\);/g);
+    let outputNames: string[] = [];
+    for (const name of regexMatch) outputNames.push(name[1]);
+
+    // Get output values
+    regexMatch = response.text.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
+    let outputValues: Boolean[] = [];
+    for (const value of regexMatch) outputValues.push(+(value[1]) == 1);
+
+    for (let i = 0; i < outputNames.length; i++) {
+      // Create a new Output object and populate it with the output details, then push it
+      let newOutput: Output = {
+        bank: i,
+        name: (outputNames[i] == "" ? 'Output ' + (i+1): outputNames[i]),
+        status: outputValues[i]
+      };
+
+      this.outputs.push(newOutput);
+    }
 
     return (true);
   }
@@ -501,6 +563,8 @@ export class NX595ESecuritySystem {
       }
     }
 
+    this.outputStatusUpdate();
+
     // Trigger zone and area updates according to changes detected
     if (performZoneUpdate) this.processZones();
     if (performAreaUpdate) this.processAreas();
@@ -522,6 +586,24 @@ export class NX595ESecuritySystem {
 
     return (true);
   }
+
+  private async outputStatusUpdate() {
+    if (this.sessionID == "") {
+      console.log('Could not fetch output status; not logged in');
+      return false;
+    }
+
+    // Fetch zone update
+    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outstat.xml', {'sess': this.sessionID});
+    const json = parser.parse(response.text)['response'];
+    const values = Object.values(json);
+    for (let i: number = 0; i < this.outputs.length; i++) {
+      this.outputs[i].status = (values[i] == 0)?false:true;
+    }
+
+    return (true);
+  }
+
 
   private async areaStatusUpdate(bank: number) {
     if (this.sessionID == "") {
@@ -551,7 +633,9 @@ export class NX595ESecuritySystem {
   private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true, allowRedirect:boolean = false) {
     let response: any;
     try {
+      process.env.NODE_OPTIONS = "--tls-min-v1.0";
       response = await superagent.post(address).type('form').send(payload).redirects(allowRedirect?1:0);
+      delete process.env.NODE_OPTIONS;
     } catch (error) {
       if (!retryOnFail) throw(error);
       else {
@@ -559,7 +643,9 @@ export class NX595ESecuritySystem {
           await this.login();
           try {
             (<any>payload)['sess'] = this.sessionID;
+            process.env.NODE_OPTIONS = "--tls-min-v1.0";
             response = await this.makeRequest(address, payload, false, allowRedirect);
+            delete process.env.NODE_OPTIONS;
           } catch (error) { throw (error); }
         } catch (error) { throw (error); }
       }
@@ -571,12 +657,20 @@ export class NX595ESecuritySystem {
     return this.zones;
   }
 
+  getOutputs(): Output[] {
+    return this.outputs;
+  }
+
   getAreas(): Area[] {
     return this.areas;
   }
 
   getZoneState(zone: number): boolean{
     return !(this.zones[zone].status == ZoneState.Ready);
+  }
+
+  getOutputState(output: number): boolean{
+    return (this.outputs[output].status == true);
   }
 
   getZoneBankState(zone: number): string{

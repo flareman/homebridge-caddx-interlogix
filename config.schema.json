@@ -52,6 +52,14 @@
         "default": false,
         "description": "Whether zone sensors will also expose a switch for bypassing"
       },
+      "displayOutputSwitches" : {
+        "title": "Display output relay switches",
+        "type": "boolean",
+        "required": false,
+        "placeholder": false,
+        "default": false,
+        "description": "Whether the plugin will expose switches for the output relays"
+      },
       "pollTimer" : {
         "title": "Poll delay (in ms)",
         "type": "integer",

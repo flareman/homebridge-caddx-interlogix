@@ -35,6 +35,7 @@ You need to set the following attributes:
 * `displayBypassSwitches` - this option is optional and allows you to override the plugin's standard behavior and hide the bypass switches for zones. If not set, this defaults to true (see Usage below).
 * `radarPersistence` and `smokePersistence` - these two settings are optional, and they allow to modify the time in milliseconds for which a radar or smoke sensor will remain triggered after the actual event. The default behavior is 60000 ms (or one minute) for both.
 * `displayBypassSwitches` - this setting is optional and allows you to override the plugin's standard behavior and hide the bypass switches for zones. If not set, this defaults to true (see Usage below).
+* `displayOutputSwitches` - this optional setting allows you to display switches for controlling the security system's output relays (defaults to false). Some users use the relays to control devices such as outdoor lights or garage doors, this setting exposes control of the output relays to HomeKit. Make sure to check the output settings in the NX-595E's web interface; by default, they turn back off again after a few seconds, you will have to modify that behavior to whatever you like. In any case, the plugin will reflect the current state of the relays.
 * `ignoreZones` - this attribute allows the user to define certain zones that should be ignored. This is mostly necessary for older version of the network interface software (i.e. up to 0.106): newer versions denotate unused zones using "!", so we have a way of detecting those. In versions before 0.107 zone naming isn't supported, and the system reports all zones with "" names. In these cases, the user needs a way to indicate which zones the plugin should ignore, in order to avoid polluting the Homebridge/HomeKit interface with unused sensors. `ignoreZones` is defined as a string value containing comma-separated zone indexes up to 999. Zone ranges are also supported, using dashes. An example of a valid value would be `"2,4,6-8,24-36,45"`. Entries such as `-14`, `9999`, `2-4-6`, `1,--4,6`, or `6-3` are invalid. Likewise, zone indexes beyond the count determined by the system will also not be accepted.
 * `override` - this array of items allows the user to override the names and types of zone sensors. You can either set this manually in config.json, or use the Config UI X form for an easier time. For every zone that you want to override, you specify an array item with three properties: `index`, `name` and `sensor`. `index` determines the index of the zone to be overriden, and is mandatory; the zone index should exist, and in case the user sets more than one overrides for the same zone index, only the last one declared is taken into account. `name` is optional; if you define a name here, it will override the name that the plugin fetches from the network interface. `sensor` is mandatory and can be either "Contact" (which is the default), "Radar", or "Smoke", which designates the zone sensor as either a contact, motion, or smoke sensor. This does not affect the actual function or reporting of the sensor, but changes the way that it appears in Homebridge and HomeKit, which allows for more accurate Siri use and automating.
 
@@ -61,6 +62,7 @@ Another sample config.json platform entry would be:
   "ip": "192.168.1.1",
   "useHTTPS": true,
   "pollTimer": 500,
+  "displayOutputSwitches": true,
   "displayBypassSwitches": false,
   "radarPersistence": 20000,
   "smokePersistence": 180000,
@@ -74,7 +76,7 @@ Another sample config.json platform entry would be:
 }
 ```
 
-The example above defines the necessary parameters for connecting with the network interface, enables SSL connections with it, removes bypass switches for sensors, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
+The example above defines the necessary parameters for connecting with the network interface, enables SSL connections with it, removes bypass switches for sensors, enables output switches, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
 
 ## Usage
 
@@ -109,6 +111,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.1.8 Added output relay control; set requirement for TLSv1 for SSL connections
 * 1.1.7 Added SSL support
 * 1.1.6 Fixed error in area state masking code; changed default value for radar bypass option; clarified alarm flags
 * 1.1.5 Added sensor persistence

@@ -4,6 +4,7 @@ import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
 import { NX595EPlatformContactSensorAccessory } from './platformAccessory';
+import { NX595EPlatformOutputAccessory } from './platformAccessory';
 import { NX595EPlatformSmokeSensorAccessory } from './platformAccessory';
 import { NX595EPlatformRadarAccessory } from './platformAccessory';
 import { AreaState } from './definitions';
@@ -28,6 +29,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private radarPersistence: number = 60000;
   private smokePersistence: number = 60000;
   private displayBypassSwitches: Boolean = false;
+  private displayOutputSwitches: Boolean = true;
   private useHTTPS: Boolean = false;
 
   constructor(
@@ -222,6 +224,20 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     let devices: Object[];
     devices = [];
 
+    if (this.displayOutputSwitches) {
+      this.securitySystem.getOutputs().forEach(output => {
+        this.log.debug('Detected output: ', output.name);
+        devices.push({
+          type: DeviceType.output,
+          uniqueID: output.bank + '#' + output.name,
+          bank: output.bank,
+          bank_state: output.status,
+          displayName: output.name,
+          firmwareVersion: this.securitySystem.getFirmwareVersion()
+        });
+      });
+    }
+
     this.securitySystem.getAreas().forEach(area => {
       this.log.debug('Detected area: ', area.name);
       devices.push({
@@ -363,6 +379,10 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
                 new NX595EPlatformSecurityAreaAccessory(this, existingAccessory, this.securitySystem);
                 break;
               }
+              case DeviceType.output: {
+                new NX595EPlatformOutputAccessory(this, existingAccessory);
+                break;
+              }
               case DeviceType.radar: {
                 new NX595EPlatformRadarAccessory(this, existingAccessory, this.displayBypassSwitches);
                 break;
@@ -402,10 +422,14 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        if (device.type == DeviceType.area || device.shouldIgnore == false) {
+        if (device.type == DeviceType.area || device.type == DeviceType.output || device.shouldIgnore == false) {
           switch (device.type) {
             case DeviceType.area: {
               new NX595EPlatformSecurityAreaAccessory(this, accessory, this.securitySystem);
+              break;
+            }
+            case DeviceType.output: {
+              new NX595EPlatformOutputAccessory(this, accessory);
               break;
             }
             case DeviceType.radar: {

@@ -39,13 +39,13 @@ export class NX595EPlatformSecurityAreaAccessory {
           ],
       });
       this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemTargetState)!
-        .on('set', this.setTargetState.bind(this));
+        .onSet(this.setTargetState.bind(this));
 
       this.chimeService = this.accessory.getService(this.platform.Service.Switch) || this.accessory.addService(this.platform.Service.Switch);
 
       this.chimeService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Chime");
       this.chimeService.getCharacteristic(this.platform.Characteristic.On)!
-        .on('set', this.setChimeState.bind(this));
+        .onSet(this.setChimeState.bind(this));
 
         this.platform.log.debug('Alarm system created: ', accessory.context.device.displayName);
   }
@@ -61,7 +61,6 @@ export class NX595EPlatformSecurityAreaAccessory {
     if (isNotReady && value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
       const error = new Error("Area is not ready for arming")
       this.platform.log.error(error.message);
-      callback(error);
       return;
     }
 
@@ -69,7 +68,6 @@ export class NX595EPlatformSecurityAreaAccessory {
       value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
         const error = new Error("Attempting to arm already armed area")
         this.platform.log.error(error.message);
-        callback(error);
         return;
       }
     let command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_DISARM;
@@ -87,16 +85,12 @@ export class NX595EPlatformSecurityAreaAccessory {
         break;
       }
       default: {
-        callback(null);
         return;
       }
     }
     this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
 
     this.platform.log.debug('Set Alarm State Characteristic On ->', value);
-
-    // you must call the callback function
-    callback(null);
   }
 
   setChimeState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -104,9 +98,41 @@ export class NX595EPlatformSecurityAreaAccessory {
     this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
 
     this.platform.log.debug('Set Chime Characteristic On ->', value);
+  }
+}
 
-    // you must call the callback function
-    callback(null);
+export class NX595EPlatformOutputAccessory {
+  private outputService: Service | undefined = undefined;
+
+  constructor(
+    protected readonly platform: NX595EPlatform,
+    protected readonly accessory: PlatformAccessory,
+  ) {
+    this.outputService = this.accessory.getService(this.platform.Service.Switch);
+    if (this.outputService == undefined) {
+      this.outputService = this.accessory.addService(this.platform.Service.Switch);
+    }
+    this.outputService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+    this.outputService.getCharacteristic(this.platform.Characteristic.On)!
+      .onSet(this.setOutputState.bind(this));
+    this.outputService.getCharacteristic(this.platform.Characteristic.On)!
+        .onGet(this.getOutputState.bind(this));
+  }
+
+  setOutputState(value: CharacteristicValue) {
+    console.log(value);
+    this.platform.securitySystem.sendOutputCommand(Boolean(value), this.accessory.context.device.bank);
+
+    this.platform.log.debug('Set Characteristic On ->', value);
+  }
+
+  getOutputState() {
+    // Get the output value and return it to Homebridge
+
+    const value: Boolean = this.platform.securitySystem.getOutputState(this.accessory.context.device.bank);
+    this.platform.log.debug('Get Characteristic On ->', value);
+
+    return (value == true? true: false);
   }
 }
 
@@ -125,7 +151,7 @@ class NX595EPlatformSensorAccessory {
       }
       this.bypassService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName + " Bypass");
       this.bypassService.getCharacteristic(this.platform.Characteristic.On)!
-        .on('set', this.setBypassState.bind(this));
+        .onSet(this.setBypassState.bind(this));
     } else {
       if (this.bypassService) {
         this.accessory.removeService(this.bypassService);
@@ -141,16 +167,12 @@ class NX595EPlatformSensorAccessory {
     // if (isArmed) {
     //   const error = new Error("Area is armed; cannot change bypass status")
     //   this.platform.log.error(error.message);
-    //   callback(error);
     //   return;
     // }
 
     this.platform.securitySystem.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
 
     this.platform.log.debug('Set Characteristic On ->', value);
-
-    // you must call the callback function
-    callback(null);
   }
 }
 

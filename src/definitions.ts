@@ -43,6 +43,12 @@ export interface Zone {
   autoBypass: boolean;
 }
 
+export interface Output {
+  bank: number;
+  name: string;
+  status: Boolean;
+}
+
 export interface SequenceResponse {
   areas: number[];
   zones: number[];
@@ -185,5 +191,6 @@ export enum DeviceType {
   area = "area",
   contact = "contact",
   radar = "radar",
-  smoke = "smoke"
+  smoke = "smoke",
+  output = "output"
 }
