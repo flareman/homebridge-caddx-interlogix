@@ -1,12 +1,12 @@
 {
   "name": "homebridge-caddx-interlogix",
-  "version": "1.1.9",
+  "version": "1.2.0",
   "lockfileVersion": 2,
   "requires": true,
   "packages": {
     "": {
       "name": "homebridge-caddx-interlogix",
-      "version": "1.1.9",
+      "version": "1.2.0",
       "license": "Apache-2.0",
       "dependencies": {
         "fast-xml-parser": "^3.17.6",
