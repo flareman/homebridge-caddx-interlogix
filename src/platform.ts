@@ -44,7 +44,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.displayBypassSwitches = (this.config.displayBypassSwitches)? <Boolean>this.config.displayBypassSwitches: false;
     this.displayOutputSwitches = (this.config.displayOutputSwitches)? <Boolean>this.config.displayOutputSwitches: false;
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
-    this.useHTTPS = (this.config.useHTTPS)?this.config.useHTTPS:false;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin, this.useHTTPS);
     this.log.debug('Finished initializing platform:', this.config.name);

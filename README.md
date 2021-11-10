@@ -30,7 +30,6 @@ You need to set the following attributes:
 * `username` - this is the username you have set in your NX-595E web interface. It is advised that you create a user just for homebridge use, as logging in from another location will log you out on the plugin side of things
 * `pin` - this is the PIN code you have set in your web interface for the desired username; it is always 4 digits long
 * `ip` - this is the local IP address for the NX-595E network interface. You can either set a static IP from the web interface, or use your network router interface to assign a fixed IP to the MAC address of the alarm system; in any case, you will want the IP address to remain the same, or the plugin will not be able to communicate with the alarm
-* `useHTTPS` - this optional setting enables SSL connections to the network interface, for those that want to use it. Defaults to 'false'.
 * `pollTimer` - this plugin works by asking the NX-595E for changes at given time intervals, a technique otherwise known as "polling". This attribute determines the amount of time in milliseconds between polling attemps. Too small values might congest your alarm's network interface and force it to ignore incoming requests, too large ones will result in slow status updates. Based on trial and error, anywhere between 250 and 2500 is good.
 * `displayBypassSwitches` - this option is optional and allows you to override the plugin's standard behavior and hide the bypass switches for zones. If not set, this defaults to true (see Usage below).
 * `radarPersistence` and `smokePersistence` - these two settings are optional, and they allow to modify the time in milliseconds for which a radar or smoke sensor will remain triggered after the actual event. The default behavior is 60000 ms (or one minute) for both.
@@ -60,7 +59,6 @@ Another sample config.json platform entry would be:
   "username": "User 1",
   "pin": "1234",
   "ip": "192.168.1.1",
-  "useHTTPS": true,
   "pollTimer": 500,
   "displayOutputSwitches": true,
   "displayBypassSwitches": false,
@@ -76,7 +74,7 @@ Another sample config.json platform entry would be:
 }
 ```
 
-The example above defines the necessary parameters for connecting with the network interface, enables SSL connections with it, removes bypass switches for sensors, enables output switches, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
+The example above defines the necessary parameters for connecting with the network interface, removes bypass switches for sensors, enables output switches, sets radar persistence time to twenty seconds and smoke sensor persistence time to three minutes, and overrides zones \#1, \#2, \#5, and \#7, renaming the first two and the seventh contacts, defining zone sensor \#5 as a smoke sensor and \#7 as a motion sensor, and indicating that zones \#8, \#45, and all zones from \#10 to \#12 and from \#24 to \#36 should be ignored.
 
 ## Usage
 
@@ -91,6 +89,10 @@ In detail, after the plugin has started up, you will have the following accessor
 6. Output relays can be exposed as switches to Homebridge, so you can control those through HomeKit, if you are using them in your setup. The default behavior is disabled, but you can set the `displayOutputSwitches` to `true` to enable these.
 
 Feel free to assign your accessories to the rooms of your house as they really are, it helps with automating.
+
+## SSL conundrum
+
+At version 1.1.6 [Scott Maynard](https://github.com/s-01010011) contacted me with a problem: the plugin could not connect with his installation, running on version 0.106-J of firmware. Turns out Interlogix has baked in SSL support for the web interface, with the web server providing access for both standard (http:// over port 80) and secure (https:// over port 443 by default) connections. However, the SSL version and the cipher that NX-595E uses are old and depreciated and all modern security libraries don't support it any longer (as in, the user can't even use a modern browser to connect manually to the web interface), even though the installation manual clearly states that standard HTTP connections should be allowed side-by-side with HTTPS ones. After several tries and back and forth between us, it became clear that supporting SSL connections to the network module can only be done if the end user installs a custom-built NodeJS version on their machine, one with a custom OpenSSL build to support the old protocols, which is both unsafe and impractical. With all this in mind, homebridge-caddx-interlogix does **not** support SSL connections at this time. Any users who have this issue are advised to either use an old browser version, or the Ultrasync+ mobile app, to connect to the web interface as installers and disable the SSL feature, in order to restore standard functionality. Alas, the perils of end-of-life software :shrug:
 
 ## Miscellany
 
@@ -112,6 +114,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.2.0 Disabled SSL functionality; NX-595E SSL version is depreciated and not supported by newer NodeJS/OpenSSL library versions
 * 1.1.9 Added output relay control option in config.json; README.md description for output relay switches
 * 1.1.8 Added output relay control; set requirement for TLSv1 for SSL connections
 * 1.1.7 Added SSL support
