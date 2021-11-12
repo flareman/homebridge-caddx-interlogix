@@ -392,7 +392,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               }
               case DeviceType.contact:
               default: {
-                new NX595EPlatformContactSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
+                if (device.shouldIgnore == false) {
+                  new NX595EPlatformContactSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
+                }
                 break;
               }
             }

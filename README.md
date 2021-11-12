@@ -114,6 +114,7 @@ There are a few kinks that need ironing out, namely:
 
 ## Changelog
 
+* 1.2.1 Fixed bug recreating outputs every other server restart when displayOutputSwitched is set to false
 * 1.2.0 Disabled SSL functionality; NX-595E SSL version is depreciated and not supported by newer NodeJS/OpenSSL library versions
 * 1.1.9 Added output relay control option in config.json; README.md description for output relay switches
 * 1.1.8 Added output relay control; set requirement for TLSv1 for SSL connections
