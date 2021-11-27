@@ -140,7 +140,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
               }
               case DeviceType.smoke: {
                 accService = accessory.getService(this.Service.SmokeSensor);
-                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.radarPersistence) {
+                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.smokePersistence) {
                   if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(true);
                 } else {
                   this.zoneDeltas[zone.bank] = -1;
@@ -379,15 +379,21 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
                 break;
               }
               case DeviceType.output: {
-                new NX595EPlatformOutputAccessory(this, existingAccessory);
+                if (device.shouldIgnore == false) {
+                  new NX595EPlatformOutputAccessory(this, existingAccessory);
+                }
                 break;
               }
               case DeviceType.radar: {
-                new NX595EPlatformRadarAccessory(this, existingAccessory, this.displayBypassSwitches);
+                if (device.shouldIgnore == false) {
+                  new NX595EPlatformRadarAccessory(this, existingAccessory, this.displayBypassSwitches);
+                }
                 break;
               }
               case DeviceType.smoke: {
-                new NX595EPlatformSmokeSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
+                if (device.shouldIgnore == false) {
+                  new NX595EPlatformSmokeSensorAccessory(this, existingAccessory, this.displayBypassSwitches);
+                }
                 break;
               }
               case DeviceType.contact:
@@ -423,7 +429,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        if (device.type == DeviceType.area || device.type == DeviceType.output || device.shouldIgnore == false) {
+        if (device.type == DeviceType.area || device.shouldIgnore == false) {
           switch (device.type) {
             case DeviceType.area: {
               new NX595EPlatformSecurityAreaAccessory(this, accessory, this.securitySystem);

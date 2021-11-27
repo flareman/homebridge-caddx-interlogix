@@ -633,9 +633,7 @@ export class NX595ESecuritySystem {
   private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true, allowRedirect:boolean = false) {
     let response: any;
     try {
-      process.env.NODE_OPTIONS = "--tls-min-v1.0";
       response = await superagent.post(address).type('form').send(payload).redirects(allowRedirect?1:0);
-      delete process.env.NODE_OPTIONS;
     } catch (error) {
       if (!retryOnFail) throw(error);
       else {
@@ -643,9 +641,7 @@ export class NX595ESecuritySystem {
           await this.login();
           try {
             (<any>payload)['sess'] = this.sessionID;
-            process.env.NODE_OPTIONS = "--tls-min-v1.0";
             response = await this.makeRequest(address, payload, false, allowRedirect);
-            delete process.env.NODE_OPTIONS;
           } catch (error) { throw (error); }
         } catch (error) { throw (error); }
       }

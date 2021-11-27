@@ -111,30 +111,3 @@ There are a few kinks that need ironing out, namely:
 2. I would like to add the option for night arming, i.e. home arming with immediate alarm triggering when the front door contact fires. HomeKit/HomeBridge offers this capability, but the network interface code (which was used for reverse engineering this plugin) does not include a clear command for this. It might be possible, but it requires testing different command codes to find the proper one, which - even if such a command exists - is essentially trial-and-error, and very time consuming.
 
 3. Some people use several components in their security setup, which are not necessarily part of the CaddX line (i.e. separate Aqara window vibration sensors). I would like to look into the ability to manually fire an alarm, so that these people can set their own alarm rules in HomeKit.
-
-## Changelog
-
-* 1.2.1 Fixed bug recreating outputs every other server restart when displayOutputSwitched is set to false
-* 1.2.0 Disabled SSL functionality; NX-595E SSL version is depreciated and not supported by newer NodeJS/OpenSSL library versions
-* 1.1.9 Added output relay control option in config.json; README.md description for output relay switches
-* 1.1.8 Added output relay control; set requirement for TLSv1 for SSL connections
-* 1.1.7 Added SSL support
-* 1.1.6 Fixed error in area state masking code; changed default value for radar bypass option; clarified alarm flags
-* 1.1.5 Added sensor persistence
-* 1.1.3-1.1.4 Added option to display bypass switches for sensors
-* 1.1.2 Lint error fix at platform.ts
-* 1.1.1 Fixed zone ignoring bug; added override zone index option and automatic accessory pruning for changed sensor types and removed sensors
-* 1.1.0 Added zone ignoring capability; added smoke sensor override option
-* 1.0.15 Removed unnamed zones pruning from core logic for versions up to 0.106
-* 1.0.14 Allowed for unnamed zones for compatibility with pre-.106 version interfaces
-* 1.0.13 Added debug output for testing purposes
-* 1.0.12 Disabled the arm status check before issuing a zone bypass command; need a way to determine which zones are assigned to which area
-* 1.0.10 - 1.0.11 Fixed a bug in followup to commit 3bc2290 where zone bypass commands were crashing the plugin
-* 1.0.7 - 1.0.9 Attempt to fix crashing behavior while parsing installations with non-sequential zone bank numbers; special thanks go to  ([@mabrodeur](https://github.com/mabrodeur)) for help with debugging
-* 1.0.6 Changed the retrieveZones function in security system source code to modify the counter, in order to account for non-sequential zone setup on the installer's side; props go to Jo Lienhoop ([@](https://github.com/JoHoop)) for discovering this bug
-* 1.0.5 Fixed a bug where attempting to rearm an already armed zone would crash the Homebridge instance
-* 1.0.4 Added zone bypassing capabilities. Also, the system now will not allow an arming command to go through when an area is not ready for arming (i.e. contact sensor at fault without being bypassed)
-* 1.0.3 Added override customization option to zone sensors
-* 1.0.2 Fixed URI decoding in zone and area names
-* 1.0.1 Fixed '%20' instead of blank in zone names
-* 1.0.0 Initial release
