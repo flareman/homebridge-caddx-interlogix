@@ -3,9 +3,15 @@
 
 <img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
 
+</p>
+
+<span align="center">
+
+[![npm](https://img.shields.io/npm/v/homebridge-caddx-interlogix/latest?label=latest)](https://www.npmjs.com/package/homebridge-caddx-interlogixÂ)
+[![npm](https://img.shields.io/npm/dt/homebridge-caddx-interlogix)](https://www.npmjs.com/package/homebridge-caddx-interlogix)
 [![Paypal](https://img.shields.io/badge/paypal-donate-green.svg)](https://paypal.me/flareman?locale.x=en_US)
 
-</p>
+</span>
 
 # homebridge-caddx-interlogix
 
@@ -14,13 +20,13 @@ This is a Homebridge plugin for the [CaddX](https://caddx.gr/product/nx-595e/)/[
 
 ## Installation
 
-To install, make sure you have a valid Homebridge installation, then run:
+To install, make sure you have a valid Homebridge installation, then either find and install the plugin from the [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x) interface, or using a terminal prompt run:
 
 ```
 npm install -g homebridge-caddx-interlogix
 ```
 
-After the installation you will have to edit your config.json file to include necessary parameters for the alarm system to function properly. The plugin supports the Homebridge Plugin Config schema, so you can also edit all necessary values from within the [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x).
+After the installation you will have to edit your config.json file to include necessary parameters for the alarm system to function properly. The plugin supports the Homebridge Plugin Config schema, so you can also edit all necessary values from within the Homebridge Config UI X].
 
 ## Configuration
 
