@@ -257,6 +257,7 @@ export class NX595ESecuritySystem {
         this.areas.push(newArea);
       });
 
+      if (this.areas.length == 0) throw new Error('No areas found; check your installation and/or user permissions');
       this.processAreas();
     } catch (error) { throw(error); }
 
@@ -646,24 +647,26 @@ export class NX595ESecuritySystem {
 
   private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true) {
     let response: any;
-    response = await superagent.post(address).type('form').send(payload)
-    .catch(async err => {
-      if ((err.status / 100 | 0) == 3) {
-        if (!retryOnFail) {
-          throw (new Error('Login failed: incorrect credentials'));
-        } else {
+    try {
+      response = await superagent.post(address).type('form').send(payload);
+      if ((response.statusCode / 100 | 0) == 2) return response;
+      if ((response.statusCode / 100 | 0) == 3) {
+        if (!retryOnFail) throw new Error('Request failed; aborting');
+        else {
           try {
             console.debug('Session timeout; attempting reconnect');
             await this.login();
             (<any>payload)['sess'] = this.sessionID;
-            response = this.makeRequest(address, payload, false)
-            .catch(err => {
-              throw new Error('Request failed: ' + err.message);
-            });
-          } catch (error) { throw (error); }
+            response = this.makeRequest(address, payload, false);
+          } catch (error) {
+            throw(error);
+          }
         }
-      } else throw new Error('Request failed: ' + err.message);
-    });
+      }
+    } catch (error) {
+      throw(error);
+    }
+
     return response;
   }
 
