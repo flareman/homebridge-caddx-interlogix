@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2022-7-25
+### Fixed
+- Rewrote makeRequest mechanism to account for error handling and redirects while refreshing session ID
+
+
 ## [1.2.3] - 2022-7-25
 ### Changed
 - Reworked the entire error reporting mechanism to conform to homebridge's verified plugin program standards
