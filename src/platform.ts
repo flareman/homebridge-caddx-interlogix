@@ -46,17 +46,27 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin, this.useHTTPS);
-    this.log.debug('Finished initializing platform:', this.config.name);
 
+    this.log.debug('Finished initializing platform:', this.config.name);
+    this.login();
+  }
+
+  login() {
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
     // in order to ensure they weren't added to homebridge already. This event can also be used
     // to start discovery of new accessories.
     this.api.on('didFinishLaunching', () => {
-      log.debug('Executed didFinishLaunching callback');
+      this.log.debug('Executed didFinishLaunching callback');
       // run the method to discover / register your devices as accessories
       this.securitySystem.login().then(() => {
-        this.discoverDevices();
+        try {
+          this.discoverDevices();
+        } catch (error) {
+          this.log.error((<Error>error).message);
+          this.setCatastrophe(this.accessories);
+          return;
+        }
         this.areaSequences = new Array(this.securitySystem.getAreas().length);
         this.zoneSequences = new Array(this.securitySystem.getZones().length);
         this.zoneDeltas = new Array(this.securitySystem.getZones().length);
@@ -64,6 +74,9 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         this.zoneSequences.fill(-1);
         this.zoneDeltas.fill(-1);
         setTimeout(this.updateAccessories.bind(this), this.pollTimer);
+      }).catch(err => {
+        this.log.error(err.message);
+        this.setCatastrophe(this.accessories);
       });
     });
   }
@@ -79,9 +92,26 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.accessories.push(accessory);
   }
 
+  setCatastrophe(accessories) {
+    accessories.forEach((accessory) => {
+      accessory.services
+      .filter((service) => service.UUID != this.Service.AccessoryInformation)
+      .forEach((service) => {
+        service.characteristics.forEach((characteristic) => {
+          characteristic.on('get', (next) => {
+            next(new Error("Platform failed to initialize"))
+          })
+        })
+      })
+    })
+  }
+
   async updateAccessories() {
     let accService: Service | undefined = undefined;
-    await this.securitySystem.poll();
+    if (this.securitySystem == undefined) return;
+
+    try { await this.securitySystem.poll(); }
+    catch (error) { this.log.error((<Error>error).message); this.setCatastrophe(this.accessories); return; }
 
     this.securitySystem.getZones().forEach(zone => {
       if (zone == undefined) return;
@@ -223,6 +253,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   discoverDevices() {
     let devices: Object[];
     devices = [];
+
+    if (this.securitySystem == undefined) return;
 
     this.securitySystem.getOutputs().forEach(output => {
       this.log.debug('Detected output: ', output.name);

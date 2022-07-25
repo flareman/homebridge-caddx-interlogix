@@ -59,14 +59,14 @@ export class NX595EPlatformSecurityAreaAccessory {
     const current = this.alarmService.getCharacteristic(this.platform.Characteristic.SecuritySystemCurrentState).value;
     const isNotReady = (this.securitySystem.getAreaStatus(this.accessory.context.device.bank) === AreaState.Status[AreaState.State.NOT_READY]) ? true : false;
     if (isNotReady && value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
-      const error = new Error("Area is not ready for arming")
+      const error = new Error("Area is not ready for arming");
       this.platform.log.error(error.message);
       return;
     }
 
     if (current !== this.platform.Characteristic.SecuritySystemTargetState.DISARM &&
       value !== this.platform.Characteristic.SecuritySystemTargetState.DISARM) {
-        const error = new Error("Attempting to arm already armed area")
+        const error = new Error("Attempting to arm already armed area");
         this.platform.log.error(error.message);
         return;
       }
@@ -88,16 +88,23 @@ export class NX595EPlatformSecurityAreaAccessory {
         return;
       }
     }
-    this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
+    try {
+      this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
+      this.platform.log.debug('Set Alarm State Characteristic On ->', value);
+    } catch (error) {
+      this.platform.log.error((<Error>error).message);
+    }
 
-    this.platform.log.debug('Set Alarm State Characteristic On ->', value);
   }
 
   setChimeState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
-
-    this.platform.log.debug('Set Chime Characteristic On ->', value);
+    try {
+      this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
+      this.platform.log.debug('Set Chime Characteristic On ->', value);
+    } catch (error) {
+      this.platform.log.error((<Error>error).message);
+    }
   }
 }
 
@@ -120,16 +127,18 @@ export class NX595EPlatformOutputAccessory {
   }
 
   setOutputState(value: CharacteristicValue) {
-    console.log(value);
-    this.platform.securitySystem.sendOutputCommand(Boolean(value), this.accessory.context.device.bank);
-
-    this.platform.log.debug('Set Characteristic On ->', value);
+    try {
+      this.platform.securitySystem!.sendOutputCommand(Boolean(value), this.accessory.context.device.bank);
+      this.platform.log.debug('Set Characteristic On ->', value);
+    } catch (error) {
+      this.platform.log.error((<Error>error).message);
+    }
   }
 
   getOutputState() {
     // Get the output value and return it to Homebridge
 
-    const value: Boolean = this.platform.securitySystem.getOutputState(this.accessory.context.device.bank);
+    const value: Boolean = this.platform.securitySystem!.getOutputState(this.accessory.context.device.bank);
     this.platform.log.debug('Get Characteristic On ->', value);
 
     return (value == true? true: false);
@@ -170,9 +179,12 @@ class NX595EPlatformSensorAccessory {
     //   return;
     // }
 
-    this.platform.securitySystem.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
-
-    this.platform.log.debug('Set Characteristic On ->', value);
+    try {
+      this.platform.securitySystem!.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
+      this.platform.log.debug('Set Characteristic On ->', value);
+    } catch (error) {
+      this.platform.log.error((<Error>error).message);
+    }
   }
 }
 

@@ -1,19 +1,19 @@
 {
   "name": "homebridge-caddx-interlogix",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "lockfileVersion": 2,
   "requires": true,
   "packages": {
     "": {
       "name": "homebridge-caddx-interlogix",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "license": "Apache-2.0",
       "dependencies": {
         "fast-xml-parser": "^3.17.6",
         "superagent": "^6.1.0"
       },
       "devDependencies": {
-        "@types/node": "^14.14.6",
+        "@types/node": "^14.20.0",
         "@typescript-eslint/eslint-plugin": "^4.6.1",
         "@typescript-eslint/parser": "^4.6.1",
         "eslint": "^7.13.0",
@@ -25,7 +25,7 @@
       },
       "engines": {
         "homebridge": ">=1.0.0",
-        "node": ">=10.17.0"
+        "node": "^14.20.0 || >=16.16.0"
       }
     },
     "node_modules/@babel/code-frame": {
@@ -4034,8 +4034,7 @@
       "dev": true
     },
     "@types/node": {
-      "version": "14.17.34",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-14.17.34.tgz",
+      "version": "https://registry.npmjs.org/@types/node/-/node-14.17.34.tgz",
       "integrity": "sha512-USUftMYpmuMzeWobskoPfzDi+vkpe0dvcOBRNOscFrGxVp4jomnRxWuVohgqBow2xyIPC0S3gjxV/5079jhmDg==",
       "dev": true
     },

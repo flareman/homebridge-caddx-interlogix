@@ -38,21 +38,19 @@ export class NX595ESecuritySystem {
   protected _zvbank: number[][] = [];
 
   constructor(address: string, userid: string, pin: string, useHTTPS: Boolean = false) {
-    if (Utilities.CheckIPAddress(address)) {
-      this.IPAddress = address;
-    } else { throw new Error('Not a valid IP address'); }
-
-    if (typeof userid!='undefined' && userid) { this.username = userid; }
-    else { throw new Error('Did not specify a username'); }
-
-    if (typeof pin!='undefined' && pin) { this.passcode = pin; }
-    else { throw new Error('Did not specify a user PIN'); }
-
+    this.IPAddress = address;
+    this.username = userid;
+    this.passcode = pin;
     this.httpPrefix = (useHTTPS)?'https://':'http://';
   }
 
   async login() {
     try {
+      // Parameter checks before logging in
+      if (!(Utilities.CheckIPAddress(this.IPAddress))) { throw new Error('Not a valid IP address'); }
+      if (typeof this.username == 'undefined' || this.username == "") { throw new Error('Did not specify a username'); }
+      if (typeof this.passcode == 'undefined' || this.passcode == "") { throw new Error('Did not specify a user PIN'); }
+
       // Attempting login
       let payload = ({lgname: this.username, lgpin: this.passcode});
       const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/login.cgi', payload, false);
@@ -67,12 +65,12 @@ export class NX595ESecuritySystem {
 
       // Gotta check for successful login
       correctLine = lines1[loginPageLine].trim();
-      if (correctLine.substr(25,7) === 'Sign in')
+      if (correctLine.substring(25, 32) === 'Sign in')
             throw new Error('Login Unsuccessful');
 
       // Login confirmed, parsing session ID
       correctLine = lines2[sessionIDLine].trim();
-      this.sessionID = correctLine.substr(30, 16);
+      this.sessionID = correctLine.substring(30, 46);
 
       // Parsing panel vendor and software details
       correctLine = lines3[vendorDetailsLine].trim();
@@ -92,7 +90,7 @@ export class NX595ESecuritySystem {
       await this.retrieveOutputs();
 
       return (true);
-    } catch (error) { console.error(error); return (false); }
+    } catch (error) { throw(error); }
   }
 
   async logout() {
@@ -101,7 +99,7 @@ export class NX595ESecuritySystem {
         throw new Error('Not logged in');
 
       // Logout gracefully
-      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {}, true, true);
+      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {}, true);
       this.sessionID = "";
     } catch (error) { console.error(error); return (false); }
   }
@@ -140,7 +138,7 @@ export class NX595ESecuritySystem {
         }
       }
       return true;
-    } catch (error) { console.error(error); return false; }
+    } catch (error) { throw(error); }
   }
 
   async sendOutputCommand(command: Boolean, output: number) {
@@ -160,7 +158,7 @@ export class NX595ESecuritySystem {
       await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/output.cgi', payload);
 
       return true;
-    } catch (error) { console.error(error); return false; }
+    } catch (error) { throw(error); }
   }
 
   async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
@@ -200,7 +198,7 @@ export class NX595ESecuritySystem {
         }
       }
       return true;
-    } catch (error) { console.error(error); return false; }
+    } catch (error) { throw(error); }
   }
 
   private async retrieveAreas (response: superagent.Response | undefined = undefined) {
@@ -208,56 +206,59 @@ export class NX595ESecuritySystem {
       console.log('Could not retrieve areas; not logged in');
       return false;
     }
-    // If we are passed an already loaded Response use that, otherwise reload area.htm
-    if (response == undefined) {
-      response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/area.htm', {'sess': this.sessionID})
-      if (!response) throw new Error('Panel response returned as undefined');
-    }
 
-    // Get area sequence
-    let regexMatch: any = response.text.match(/var\s+areaSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
-    let sequence: number[] = regexMatch[1].split(',');
+    try {
+      // If we are passed an already loaded Response use that, otherwise reload area.htm
+      if (response == undefined) {
+        response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/area.htm', {'sess': this.sessionID})
+        if (!response) throw new Error('Panel response returned as undefined');
+      }
 
-    // Get area states
-    regexMatch = response.text.match(/var\s+areaStatus\s+=\s+new\s+Array\(([\d,]+)\);/);
-    let bank_states = regexMatch[1].split(',');
+      // Get area sequence
+      let regexMatch: any = response.text.match(/var\s+areaSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
+      let sequence: number[] = regexMatch[1].split(',');
 
-    // Get area names
-    regexMatch = response.text.match(/var\s+areaNames\s+=\s+new\s+Array\((\"(.+)\")\);/);
-    let area_names: string[] = regexMatch[1].split(',');
-    area_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
+      // Get area states
+      regexMatch = response.text.match(/var\s+areaStatus\s+=\s+new\s+Array\(([\d,]+)\);/);
+      let bank_states = regexMatch[1].split(',');
 
-    // Pad sequence table to match the length of area_names table
-    if (area_names.length - sequence.length > 0) {
-      let filler = new Array(area_names.length - sequence.length);
-      filler.fill(0);
-      sequence = sequence.concat(filler);
-    }
+      // Get area names
+      regexMatch = response.text.match(/var\s+areaNames\s+=\s+new\s+Array\((\"(.+)\")\);/);
+      let area_names: string[] = regexMatch[1].split(',');
+      area_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
 
-    // Reset class areas tables...
-    this.areas.length = 0;
+      // Pad sequence table to match the length of area_names table
+      if (area_names.length - sequence.length > 0) {
+        let filler = new Array(area_names.length - sequence.length);
+        filler.fill(0);
+        sequence = sequence.concat(filler);
+      }
 
-    // ... and populate it from scratch
-    area_names.forEach((name, i) => {
-      // If the name is "!" it's an empty area; ignore it
-      if (name == "%21" || name == "!") return;
+      // Reset class areas tables...
+      this.areas.length = 0;
 
-      const startingState: number = Math.floor(i / 8) * 17;
-      // Create a new Area object and populate it with the area details, then push it
-      let newArea: Area = {
-        bank: i,
-        name: (name == "" ? 'Area ' + (i+1): name),
-        priority: 6,
-        sequence: sequence[i],
-        bank_state: bank_states.slice(startingState, startingState + 17),
-        status: "",
-        states: {}
-      };
+      // ... and populate it from scratch
+      area_names.forEach((name, i) => {
+        // If the name is "!" it's an empty area; ignore it
+        if (name == "%21" || name == "!") return;
 
-      this.areas.push(newArea);
-    });
+        const startingState: number = Math.floor(i / 8) * 17;
+        // Create a new Area object and populate it with the area details, then push it
+        let newArea: Area = {
+          bank: i,
+          name: (name == "" ? 'Area ' + (i+1): name),
+          priority: 6,
+          sequence: sequence[i],
+          bank_state: bank_states.slice(startingState, startingState + 17),
+          status: "",
+          states: {}
+        };
 
-    this.processAreas();
+        this.areas.push(newArea);
+      });
+
+      this.processAreas();
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -267,35 +268,38 @@ export class NX595ESecuritySystem {
       console.log('Could not retrieve areas; not logged in');
       return false;
     }
-    // If we are passed an already loaded Response use that, otherwise reload outputs.htm
-    if (response == undefined) {
-      response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outputs.htm', {'sess': this.sessionID})
-      if (!response) throw new Error('Panel response returned as undefined');
-    }
 
-    // Reset class outputs tables...
-    this.outputs.length = 0;
+    try {
+      // If we are passed an already loaded Response use that, otherwise reload outputs.htm
+      if (response == undefined) {
+        response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outputs.htm', {'sess': this.sessionID})
+        if (!response) throw new Error('Panel response returned as undefined');
+      }
 
-    // Get output names
-    let regexMatch: any = response.text.matchAll(/var\s+oname\d+\s+=\s+decodeURIComponent\s*\(\s*decode_utf8\s*\(\s*\"(.*)\"\)\);/g);
-    let outputNames: string[] = [];
-    for (const name of regexMatch) outputNames.push(name[1]);
+      // Reset class outputs tables...
+      this.outputs.length = 0;
 
-    // Get output values
-    regexMatch = response.text.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
-    let outputValues: Boolean[] = [];
-    for (const value of regexMatch) outputValues.push(+(value[1]) == 1);
+      // Get output names
+      let regexMatch: any = response.text.matchAll(/var\s+oname\d+\s+=\s+decodeURIComponent\s*\(\s*decode_utf8\s*\(\s*\"(.*)\"\)\);/g);
+      let outputNames: string[] = [];
+      for (const name of regexMatch) outputNames.push(name[1]);
 
-    for (let i = 0; i < outputNames.length; i++) {
-      // Create a new Output object and populate it with the output details, then push it
-      let newOutput: Output = {
-        bank: i,
-        name: (outputNames[i] == "" ? 'Output ' + (i+1): outputNames[i]),
-        status: outputValues[i]
-      };
+      // Get output values
+      regexMatch = response.text.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
+      let outputValues: Boolean[] = [];
+      for (const value of regexMatch) outputValues.push(+(value[1]) == 1);
 
-      this.outputs.push(newOutput);
-    }
+      for (let i = 0; i < outputNames.length; i++) {
+        // Create a new Output object and populate it with the output details, then push it
+        let newOutput: Output = {
+          bank: i,
+          name: (outputNames[i] == "" ? 'Output ' + (i+1): outputNames[i]),
+          status: outputValues[i]
+        };
+
+        this.outputs.push(newOutput);
+      }
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -398,60 +402,62 @@ export class NX595ESecuritySystem {
       return false;
     }
 
-    // Retrieve zones.htm for parsing
-    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zones.htm', {'sess': this.sessionID})
+    try {
+      // Retrieve zones.htm for parsing
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zones.htm', {'sess': this.sessionID});
 
-    // Get Zone sequences from response and store in class instance
-    let regexMatch: any = response.text.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
-    this.zonesSequence = regexMatch[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
+      // Get Zone sequences from response and store in class instance
+      let regexMatch: any = response.text.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
+      this.zonesSequence = regexMatch[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
 
-    // Get Zone banks from response and store in class instance
-    this.zonesBank.length = 0;
-    regexMatch = response.text.match(/var\s+zoneStatus\s+=\s+new\s+Array\((.*)\);/);
-    regexMatch = regexMatch[1].matchAll(/(?:new\s+)?Array\((?<states>[^)]+)\)\s*(?=$|,\s*(?:new\s+)?Array\()/g);
-    for (const bank of regexMatch) {
-      this.zonesBank.push(bank[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number));
-    }
-
-    // Retrieve zone names
-    regexMatch = response.text.match(/var zoneNames\s*=\s*(?:new\s+)?Array\(([^)]+)\).*/);
-    let zone_names: string[] = regexMatch[1].split(',');
-    zone_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
-
-    // Firmware versions from 0.106 below don't allow for zone naming, so check for that
-    let zoneNaming: boolean = (parseFloat(this.version) > 0.106) ? true : false;
-
-    // Finally store the zones
-    // Reset class zones tables...
-    this.zones.length = 0;
-
-    // ... and populate it from scratch
-    this.zoneNameCount = zone_names.length;
-    this.zones = Array(this.zoneNameCount).fill(undefined);
-    zone_names.forEach((name, i) => {
-      // If the name is "!" it's an empty area; ignore it
-      if (name == "%21" || name == "!" || (zoneNaming && name == "")) {
-        i++;
-        return;
+      // Get Zone banks from response and store in class instance
+      this.zonesBank.length = 0;
+      regexMatch = response.text.match(/var\s+zoneStatus\s+=\s+new\s+Array\((.*)\);/);
+      regexMatch = regexMatch[1].matchAll(/(?:new\s+)?Array\((?<states>[^)]+)\)\s*(?=$|,\s*(?:new\s+)?Array\()/g);
+      for (const bank of regexMatch) {
+        this.zonesBank.push(bank[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number));
       }
 
-      // Create a new Zone object and populate it with the zone details, then push it
-      let newZone: Zone = {
-        bank: i,
-        associatedArea: -1,
-        name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ('Sensor ' + (i+1))),
-        priority: 6,
-        sequence: 0,
-        bank_state: [],
-        status: "",
-        isBypassed: false,
-        autoBypass: false
-      };
+      // Retrieve zone names
+      regexMatch = response.text.match(/var zoneNames\s*=\s*(?:new\s+)?Array\(([^)]+)\).*/);
+      let zone_names: string[] = regexMatch[1].split(',');
+      zone_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
 
-      this.zones[i] = newZone;
-    });
+      // Firmware versions from 0.106 below don't allow for zone naming, so check for that
+      let zoneNaming: boolean = (parseFloat(this.version) > 0.106) ? true : false;
 
-    this.processZones();
+      // Finally store the zones
+      // Reset class zones tables...
+      this.zones.length = 0;
+
+      // ... and populate it from scratch
+      this.zoneNameCount = zone_names.length;
+      this.zones = Array(this.zoneNameCount).fill(undefined);
+      zone_names.forEach((name, i) => {
+        // If the name is "!" it's an empty area; ignore it
+        if (name == "%21" || name == "!" || name == "%2D" || name == "-" || (zoneNaming && name == "")) {
+          i++;
+          return;
+        }
+
+        // Create a new Zone object and populate it with the zone details, then push it
+        let newZone: Zone = {
+          bank: i,
+          associatedArea: -1,
+          name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ('Sensor ' + (i+1))),
+          priority: 6,
+          sequence: 0,
+          bank_state: [],
+          status: "",
+          isBypassed: false,
+          autoBypass: false
+        };
+
+        this.zones[i] = newZone;
+      });
+
+      this.processZones();
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -531,43 +537,45 @@ export class NX595ESecuritySystem {
       return false;
     }
 
-    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/seq.xml', {'sess': this.sessionID});
-    const json = parser.parse(response.text)['response'];
-    const seqResponse: SequenceResponse = {
-      areas: typeof(json['areas']) == 'number'? [json['areas']]: json['areas'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number),
-      zones: typeof(json['zones']) == 'number'? [json['zones']]: json['zones'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number)
-    };
+    try {
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/seq.xml', {'sess': this.sessionID});
+      const json = parser.parse(response.text)['response'];
+      const seqResponse: SequenceResponse = {
+        areas: typeof(json['areas']) == 'number'? [json['areas']]: json['areas'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number),
+        zones: typeof(json['zones']) == 'number'? [json['zones']]: json['zones'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number)
+      };
 
-    let performAreaUpdate: boolean = false;
-    let performZoneUpdate: boolean = false;
+      let performAreaUpdate: boolean = false;
+      let performZoneUpdate: boolean = false;
 
-    let index = 0;
+      let index = 0;
 
-    // Check for zone updates first
-    for (index = 0; index < seqResponse.zones.length; index++) {
-      if (seqResponse.zones[index] != this.zonesSequence[index]) {
-        // Updating sequence and zone details now
-        this.zonesSequence[index] = seqResponse.zones[index];
-        await this.zoneStatusUpdate(index);
-        performZoneUpdate = true;
+      // Check for zone updates first
+      for (index = 0; index < seqResponse.zones.length; index++) {
+        if (seqResponse.zones[index] != this.zonesSequence[index]) {
+          // Updating sequence and zone details now
+          this.zonesSequence[index] = seqResponse.zones[index];
+          await this.zoneStatusUpdate(index);
+          performZoneUpdate = true;
+        }
       }
-    }
 
-    // Now check for area update
-    for (index = 0; index < seqResponse.areas.length; index++) {
-      if (seqResponse.areas[index] != this.areas[index].sequence) {
-        // Updating sequence and zone details now
-        this.areas[index].sequence = seqResponse.areas[index];
-        await this.areaStatusUpdate(index);
-        performAreaUpdate = true;
+      // Now check for area update
+      for (index = 0; index < seqResponse.areas.length; index++) {
+        if (seqResponse.areas[index] != this.areas[index].sequence) {
+          // Updating sequence and zone details now
+          this.areas[index].sequence = seqResponse.areas[index];
+          await this.areaStatusUpdate(index);
+          performAreaUpdate = true;
+        }
       }
-    }
 
-    this.outputStatusUpdate();
+      this.outputStatusUpdate();
 
-    // Trigger zone and area updates according to changes detected
-    if (performZoneUpdate) this.processZones();
-    if (performAreaUpdate) this.processAreas();
+      // Trigger zone and area updates according to changes detected
+      if (performZoneUpdate) this.processZones();
+      if (performAreaUpdate) this.processAreas();
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -579,10 +587,12 @@ export class NX595ESecuritySystem {
     }
 
     // Fetch zone update
-    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zstate.xml', {'sess': this.sessionID, 'state': bank});
-    const json = parser.parse(response.text)['response'];
-    const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
-    this.zonesBank[bank] = zdat;
+    try {
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zstate.xml', {'sess': this.sessionID, 'state': bank});
+      const json = parser.parse(response.text)['response'];
+      const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
+      this.zonesBank[bank] = zdat;
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -594,12 +604,14 @@ export class NX595ESecuritySystem {
     }
 
     // Fetch zone update
-    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outstat.xml', {'sess': this.sessionID});
-    const json = parser.parse(response.text)['response'];
-    const values = Object.values(json);
-    for (let i: number = 0; i < this.outputs.length; i++) {
-      this.outputs[i].status = (values[i] == 0)?false:true;
-    }
+    try {
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outstat.xml', {'sess': this.sessionID});
+      const json = parser.parse(response.text)['response'];
+      const values = Object.values(json);
+      for (let i: number = 0; i < this.outputs.length; i++) {
+        this.outputs[i].status = (values[i] == 0)?false:true;
+      }
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -612,14 +624,16 @@ export class NX595ESecuritySystem {
     }
 
     // Fetch area update
-    const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/status.xml', {'sess': this.sessionID, 'arsel': bank});
-    const json = parser.parse(response.text)['response'];
-    if (json.hasOwnProperty('sysflt')) this.__extra_area_status = json['sysflt'].split('\n');
-    else this.__extra_area_status = [];
-    this.areas[bank].bank_state.length = 0;
-    for (let index: number = 0; index < 17; index++) {
-      this.areas[bank].bank_state.push(json["stat"+index]);
-    }
+    try {
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/status.xml', {'sess': this.sessionID, 'arsel': bank});
+      const json = parser.parse(response.text)['response'];
+      if (json.hasOwnProperty('sysflt')) this.__extra_area_status = json['sysflt'].split('\n');
+      else this.__extra_area_status = [];
+      this.areas[bank].bank_state.length = 0;
+      for (let index: number = 0; index < 17; index++) {
+        this.areas[bank].bank_state.push(json["stat"+index]);
+      }
+    } catch (error) { throw(error); }
 
     return (true);
   }
@@ -630,22 +644,26 @@ export class NX595ESecuritySystem {
     return 1;
   }
 
-  private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true, allowRedirect:boolean = false) {
+  private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true) {
     let response: any;
-    try {
-      response = await superagent.post(address).type('form').send(payload).redirects(allowRedirect?1:0);
-    } catch (error) {
-      if (!retryOnFail) throw(error);
-      else {
-        try {
-          await this.login();
+    response = await superagent.post(address).type('form').send(payload)
+    .catch(async err => {
+      if ((err.status / 100 | 0) == 3) {
+        if (!retryOnFail) {
+          throw (new Error('Login failed: incorrect credentials'));
+        } else {
           try {
+            console.debug('Session timeout; attempting reconnect');
+            await this.login();
             (<any>payload)['sess'] = this.sessionID;
-            response = await this.makeRequest(address, payload, false, allowRedirect);
+            response = this.makeRequest(address, payload, false)
+            .catch(err => {
+              throw new Error('Request failed: ' + err.message);
+            });
           } catch (error) { throw (error); }
-        } catch (error) { throw (error); }
-      }
-    }
+        }
+      } else throw new Error('Request failed: ' + err.message);
+    });
     return response;
   }
 

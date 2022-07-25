@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2022-7-25
+### Changed
+- Reworked the entire error reporting mechanism to conform to homebridge's verified plugin program standards
+- Updated node dependency to LTS versions (v14.20.0 or 16.16.0 and above)
+- Minor changes to README.md to clarify the way zone ignoring works
+
+### Fixed
+- Fixed a bug where the plugin would crash when the session expires due to bad exception handling
+- Added %2D/"-" zone name ignoring convention to accomodate for certain firmware versions
+
+
 ## [1.2.2] - 2021-11-27
 ### Added
 - First GitHub release! Will apply to homebridge verified plugin program :v:
