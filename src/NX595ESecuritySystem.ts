@@ -101,7 +101,7 @@ export class NX595ESecuritySystem {
       // Logout gracefully
       await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {}, true);
       this.sessionID = "";
-    } catch (error) { console.error(error); return (false); }
+    } catch (error) { return (false); }
   }
 
   async sendAreaCommand(command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, areas: number[] | number = []) {
@@ -648,13 +648,13 @@ export class NX595ESecuritySystem {
   private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true) {
     let response: any;
     try {
-      response = await superagent.post(address).type('form').send(payload);
-      if ((response.statusCode / 100 | 0) == 2) return response;
-      if ((response.statusCode / 100 | 0) == 3) {
+      response = await superagent.post(address).type('form').send(payload).redirects(0);
+    } catch (error) {
+      const err: superagent.Response.error = error;
+      if ((err.status / 100 | 0) == 3) {
         if (!retryOnFail) throw new Error('Request failed; aborting');
         else {
           try {
-            console.debug('Session timeout; attempting reconnect');
             await this.login();
             (<any>payload)['sess'] = this.sessionID;
             response = this.makeRequest(address, payload, false);
@@ -662,9 +662,7 @@ export class NX595ESecuritySystem {
             throw(error);
           }
         }
-      }
-    } catch (error) {
-      throw(error);
+      } else throw(error);
     }
 
     return response;

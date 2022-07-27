@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] - 2022-7-27
+### Fixed
+- Fixed 302/304 responses in makeRequest to accomodate for automatic system logouts; this should repair the plugin failure introduced in v1.2.4
+
+
 ## [1.2.4] - 2022-7-25
 ### Fixed
 - Rewrote makeRequest mechanism to account for error handling and redirects while refreshing session ID
