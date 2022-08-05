@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] - 2022-8-3
+### Fixed
+- Network request mechanism was made more lenient; now the plugin will try to reconnect in case of network failure, before stopping responding gracefully (instead of bringing the entire homebridge instance crashing down with it). Likewise, after successfully logging in, errors will not cause the plugin to go non-responsive, defaulting to the last know values instead (and retrying during the next pollint attempt). Error reporting was made more robust; this version should fix the bugs introduced in v1.2.5.
+
+
 ## [1.2.5] - 2022-7-27
 ### Fixed
 - Fixed 302/304 responses in makeRequest to accomodate for automatic system logouts; this should repair the plugin failure introduced in v1.2.4

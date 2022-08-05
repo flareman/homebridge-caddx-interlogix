@@ -3,3 +3,7 @@ export function CheckIPAddress(ipaddress: string) {
     return (true);
   else return (false);
 }
+
+export function delay(milliseconds : number) {
+    return new Promise(resolve => setTimeout( resolve, milliseconds));
+}

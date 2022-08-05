@@ -12,6 +12,7 @@ import { AreaState } from './definitions';
 import { ZoneState } from './definitions';
 import { SecuritySystemAreaCommand } from './definitions';
 import { SecuritySystemZoneCommand } from './definitions';
+const retryDelayDuration: number = 1500;
 
 export class NX595ESecuritySystem {
   protected username: string;
@@ -53,7 +54,7 @@ export class NX595ESecuritySystem {
 
       // Attempting login
       let payload = ({lgname: this.username, lgpin: this.passcode});
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/login.cgi', payload, false);
+      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/login.cgi', payload);
       let correctLine: string = "";
       const loginPageLine: number = 25;
       const sessionIDLine: number = 28;
@@ -96,17 +97,18 @@ export class NX595ESecuritySystem {
   async logout() {
     try {
       if (this.sessionID === "")
-        throw new Error('Not logged in');
+        throw(new Error('Could not log out; not logged in'));
 
       // Logout gracefully
-      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {}, true);
+      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {});
       this.sessionID = "";
     } catch (error) { return (false); }
   }
 
   async sendAreaCommand(command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, areas: number[] | number = []) {
     try {
-      if (this.sessionID === "" && !(this.login())) return (false);
+      if (this.sessionID === "" && !(this.login()))
+        throw(new Error('Could not send area command; not logged in'));
       if (!(command in SecuritySystemAreaCommand)) throw new Error('Invalid alarm state ' + command);
 
       // Load actual area banks to local table for ease of use
@@ -143,7 +145,8 @@ export class NX595ESecuritySystem {
 
   async sendOutputCommand(command: Boolean, output: number) {
     try {
-      if (this.sessionID === "" && !(this.login())) return (false);
+      if (this.sessionID === "" && !(this.login()))
+        throw(new Error('Could not send output command; not logged in'));
 
       if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
 
@@ -163,7 +166,8 @@ export class NX595ESecuritySystem {
 
   async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
     try {
-      if (this.sessionID === "" && !(this.login())) return (false);
+      if (this.sessionID === "" && !(this.login()))
+        throw(new Error('Could not send zone command; not logged in'));
       if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
 
       // Load actual area banks to local table for ease of use
@@ -202,10 +206,8 @@ export class NX595ESecuritySystem {
   }
 
   private async retrieveAreas (response: superagent.Response | undefined = undefined) {
-    if (this.sessionID == "") {
-      console.log('Could not retrieve areas; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not retrieve areas; not logged in'));
 
     try {
       // If we are passed an already loaded Response use that, otherwise reload area.htm
@@ -265,10 +267,8 @@ export class NX595ESecuritySystem {
   }
 
   private async retrieveOutputs (response: superagent.Response | undefined = undefined) {
-    if (this.sessionID == "") {
-      console.log('Could not retrieve areas; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not retrieve outputs; not logged in'));
 
     try {
       // If we are passed an already loaded Response use that, otherwise reload outputs.htm
@@ -306,10 +306,8 @@ export class NX595ESecuritySystem {
   }
 
   private processAreas() {
-    if (this.sessionID == "") {
-      console.log('Could not process areas; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not process areas; not logged in'));
 
     // Loop through detected areas
     this.areas.forEach(area => {
@@ -398,10 +396,8 @@ export class NX595ESecuritySystem {
   }
 
   private async retrieveZones() {
-    if (this.sessionID == "") {
-      console.log('Could not retrieve zones; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not retrieve zones; not logged in'));
 
     try {
       // Retrieve zones.htm for parsing
@@ -464,10 +460,8 @@ export class NX595ESecuritySystem {
   }
 
   private processZones() {
-    if (this.sessionID == "") {
-      console.log('Could not process zones; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not process zones; not logged in'));
 
     this._zvbank = Array(this.zoneNameCount).fill([]);
 
@@ -534,7 +528,7 @@ export class NX595ESecuritySystem {
     // update functions to perform the actual update
 
     if (this.sessionID == "") {
-      console.log('Could not process zones; not logged in');
+      console.log('Could not poll system; not logged in');
       return false;
     }
 
@@ -582,10 +576,8 @@ export class NX595ESecuritySystem {
   }
 
   private async zoneStatusUpdate(bank: number) {
-    if (this.sessionID == "") {
-      console.log('Could not process zones; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not fetch zone status; not logged in'));
 
     // Fetch zone update
     try {
@@ -599,10 +591,8 @@ export class NX595ESecuritySystem {
   }
 
   private async outputStatusUpdate() {
-    if (this.sessionID == "") {
-      console.log('Could not fetch output status; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not fetch output status; not logged in'));
 
     // Fetch zone update
     try {
@@ -619,10 +609,8 @@ export class NX595ESecuritySystem {
 
 
   private async areaStatusUpdate(bank: number) {
-    if (this.sessionID == "") {
-      console.log('Could not process zones; not logged in');
-      return false;
-    }
+    if (this.sessionID == "")
+      throw(new Error('Could not fetch area status; not logged in'));
 
     // Fetch area update
     try {
@@ -645,25 +633,40 @@ export class NX595ESecuritySystem {
     return 1;
   }
 
-  private async makeRequest(address: string, payload = {}, retryOnFail: boolean = true) {
+  private async makeRequest(address: string, payload = {}) {
     let response: any;
     try {
       response = await superagent.post(address).type('form').send(payload).redirects(0);
     } catch (error) {
       const err: superagent.Response.error = error;
       if ((err.status / 100 | 0) == 3) {
-        if (!retryOnFail) throw new Error('Request failed; aborting');
-        else {
           try {
+            await Utilities.delay(retryDelayDuration);
             await this.login();
             (<any>payload)['sess'] = this.sessionID;
-            response = this.makeRequest(address, payload, false);
+            response = await this.makeRequest(address, payload);
           } catch (error) {
             throw(error);
           }
-        }
-      } else throw(error);
-    }
+      } else if (superagent.ERROR_CODES.has(err.code)) {
+          try {
+            await Utilities.delay(retryDelayDuration);
+            response = await superagent.post(address).type('form').send(payload).redirects(0);
+          } catch (error) {
+            const err2: superagent.Response.error = error;
+            if ((err2.status / 100 | 0) == 3) {
+                try {
+                  await Utilities.delay(retryDelayDuration);
+                  await this.login();
+                  (<any>payload)['sess'] = this.sessionID;
+                  response = await this.makeRequest(address, payload);
+                } catch (error) {
+                  throw(error);
+                }
+            } else throw(error);
+          }
+        } else throw(error);
+      }
 
     return response;
   }

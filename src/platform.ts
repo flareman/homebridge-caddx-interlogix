@@ -31,6 +31,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private displayBypassSwitches: Boolean = false;
   private displayOutputSwitches: Boolean = false;
   private useHTTPS: Boolean = false;
+  private loggedIn: Boolean = false;
 
   constructor(
     public readonly log: Logger,
@@ -61,9 +62,12 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       // run the method to discover / register your devices as accessories
       this.securitySystem.login().then(() => {
         try {
+          this.loggedIn = true;
           this.discoverDevices();
         } catch (error) {
+          this.loggedIn = false;
           this.log.error((<Error>error).message);
+          console.log(error);
           this.setCatastrophe(this.accessories);
           return;
         }
@@ -76,6 +80,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         setTimeout(this.updateAccessories.bind(this), this.pollTimer);
       }).catch(err => {
         this.log.error(err.message);
+        console.log(err);
         this.setCatastrophe(this.accessories);
       });
     });
@@ -92,15 +97,20 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.accessories.push(accessory);
   }
 
+  didCompleteLogin() {
+    return this.loggedIn;
+  }
+
   setCatastrophe(accessories) {
     accessories.forEach((accessory) => {
       accessory.services
       .filter((service) => service.UUID != this.Service.AccessoryInformation)
       .forEach((service) => {
         service.characteristics.forEach((characteristic) => {
-          characteristic.on('get', (next) => {
-            next(new Error("Platform failed to initialize"))
-          })
+          characteristic.updateValue(new Error("Platform failed to initialize"));
+          // characteristic.on('get', (next) => {
+          //   next(new Error("Platform failed to initialize"))
+          // })
         })
       })
     })
@@ -108,10 +118,18 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
 
   async updateAccessories() {
     let accService: Service | undefined = undefined;
-    if (this.securitySystem == undefined) return;
+    if (this.securitySystem == undefined || this.didCompleteLogin() == false) {
+      this.log.error('Platform not properly initialized; server unavailable or login unsuccessful')
+      return;
+    }
 
     try { await this.securitySystem.poll(); }
-    catch (error) { this.log.error((<Error>error).message); this.setCatastrophe(this.accessories); return; }
+    catch (error) {
+      this.log.error((<Error>error).message);
+      console.log(error);
+      setTimeout(this.updateAccessories.bind(this), this.pollTimer);
+      return;
+    }
 
     this.securitySystem.getZones().forEach(zone => {
       if (zone == undefined) return;
@@ -255,6 +273,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     devices = [];
 
     if (this.securitySystem == undefined) return;
+    if (this.didCompleteLogin() == false) return;
 
     this.securitySystem.getOutputs().forEach(output => {
       this.log.debug('Detected output: ', output.name);
