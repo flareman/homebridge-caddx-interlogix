@@ -67,7 +67,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         } catch (error) {
           this.loggedIn = false;
           this.log.error((<Error>error).message);
-          console.log(error);
           this.setCatastrophe(this.accessories);
           return;
         }
@@ -80,7 +79,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         setTimeout(this.updateAccessories.bind(this), this.pollTimer);
       }).catch(err => {
         this.log.error(err.message);
-        console.log(err);
         this.setCatastrophe(this.accessories);
       });
     });
@@ -126,7 +124,6 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     try { await this.securitySystem.poll(); }
     catch (error) {
       this.log.error((<Error>error).message);
-      console.log(error);
       setTimeout(this.updateAccessories.bind(this), this.pollTimer);
       return;
     }

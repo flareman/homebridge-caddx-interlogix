@@ -648,7 +648,7 @@ export class NX595ESecuritySystem {
           } catch (error) {
             throw(error);
           }
-      } else if (superagent.ERROR_CODES.has(err.code)) {
+      } else if (Utilities.ERROR_CODES.has(err.code)) {
           try {
             await Utilities.delay(retryDelayDuration);
             response = await superagent.post(address).type('form').send(payload).redirects(0);
