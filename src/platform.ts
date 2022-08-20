@@ -1,5 +1,6 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
+import { retryDelayDuration } from "./NX595ESecuritySystem"
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
@@ -124,7 +125,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     try { await this.securitySystem.poll(); }
     catch (error) {
       this.log.error((<Error>error).message);
-      setTimeout(this.updateAccessories.bind(this), this.pollTimer);
+      setTimeout(this.updateAccessories.bind(this), this.pollTimer + retryDelayDuration);
       return;
     }
 

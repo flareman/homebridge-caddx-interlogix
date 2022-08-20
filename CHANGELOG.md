@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.8] - 2022-8-21
+### Fixed
+- Added a plugin-wide hard-coded 3000 ms delay before reattempting a network request or a new vaule update when encountering a request error. There have been complaints about the plugin returning either socket end or 403 Forbidden errors sporadically; these are related to server function. It appears that the NX-595E server is flaky and can, under circumstances, get flooded with requests and bog down until it self-resolves. This delay should fix all this aberrant behavior. It should be noted that once initial login happens, all subsequent request attempts should by now result in a catchable error that does not lead the plugin to stopping responding, but rather force a delay before attempting to poll again. As long as the server is functioning, the accessories related to the plugin should start working again.
+
+
 ## [1.2.7] - 2022-8-12
 ### Fixed
 - Introduced a new request error enumeration to compensate for lack thereof in superagent's minified library.

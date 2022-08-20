@@ -12,7 +12,7 @@ import { AreaState } from './definitions';
 import { ZoneState } from './definitions';
 import { SecuritySystemAreaCommand } from './definitions';
 import { SecuritySystemZoneCommand } from './definitions';
-const retryDelayDuration: number = 1500;
+export const retryDelayDuration: number = 3000;
 
 export class NX595ESecuritySystem {
   protected username: string;
