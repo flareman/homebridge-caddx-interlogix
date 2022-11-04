@@ -733,20 +733,20 @@ export class NX595ESecuritySystem {
         // only from the login function, so they are called by definition as not
         // locking, as they would deadlock the program in the first attempt to
         // refresh the session
-        this.log.debug("Session expired; attempting to reacquire...");
+        this.log.debug("Session expired (status code " + response.status + "); attempting to reacquire...");
         await this.login();
         this.log.debug("Reacquired session successfully.");
 
         // We'll update the payload with the new session ID and try again
         this.log.debug("Reattempting initial request...");
         payload['sess'] = this.sessionID;
-        const newReponse = await this.client({
+        const newResponse = await this.client({
           url: address,
           data: payload
         });
         this.log.debug("Initial request sent successfully.");
-        if (newReponse.status >= 300) this.log.error("Secondary request denied by server.");
-        return newReponse;
+        if (newResponse.status >= 300) this.log.error("Secondary request denied by server with status code " + newResponse.status + ".");
+        return newResponse;
       }
     } catch (error) {
       throw error;
