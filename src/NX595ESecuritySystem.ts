@@ -261,7 +261,7 @@ export class NX595ESecuritySystem {
       this.log.debug("Retrieving areas...");
       // If we are passed an already loaded Response use that, otherwise reload area.htm
       if (response == undefined) {
-        response = await this.makeRequest('user/area.htm', {}, false);
+        response = await this.makeRequest('user/area.htm', { "sess": this.sessionID }, false);
       }
 
       // Get area sequence
@@ -323,7 +323,7 @@ export class NX595ESecuritySystem {
     try {
       this.log.debug("Retrieving zones...");
       // Retrieve zones.htm for parsing
-      const response = await this.makeRequest('user/zones.htm', {}, false);
+      const response = await this.makeRequest('user/zones.htm', { "sess": this.sessionID }, false);
 
       // Get Zone sequences from response and store in class instance
       let regexMatch: any = response.data.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
@@ -390,7 +390,7 @@ export class NX595ESecuritySystem {
       this.log.debug("Retrieving outputs...");
       // If we are passed an already loaded Response use that, otherwise reload outputs.htm
       if (response == undefined) {
-        response = await this.makeRequest('user/outputs.htm', {}, false);
+        response = await this.makeRequest('user/outputs.htm', { "sess": this.sessionID }, false);
       }
 
       if (response == undefined)
@@ -624,7 +624,7 @@ export class NX595ESecuritySystem {
       // Trigger zone and area updates according to changes detected
       if (performZoneUpdate) this.processZones();
       if (performAreaUpdate) this.processAreas();
-    } catch (error) { this.log.error("Error while polling: " + (<Error>error).message); throw(error); }
+    } catch (error) { throw(new Error("Error while polling: " + (<Error>error).message)); }
 
     return;
   }
@@ -637,6 +637,12 @@ export class NX595ESecuritySystem {
     try {
       const response = await this.makeRequest('user/zstate.xml', {'state': bank});
       const json = parser.parse(response.data)['response'];
+      if (response === undefined || json === undefined || json['zdat'] === undefined) {
+        this.log.error(response.request);
+        this.log.error(response.statusText);
+        this.log.error(response.data);
+        this.log.error(json);
+      }
       const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
       this.zonesBank[bank] = zdat;
     } catch (error) { throw(error); }
@@ -694,13 +700,16 @@ export class NX595ESecuritySystem {
 
     try {
       if (this.sessionID === "") _shouldLock = false;
-      // Finish the payload by including the current session ID
-      else payload['sess'] = this.sessionID;
 
       // Unless we are attempting to log in for the first time or if the session
       // has expired, we should wait on our mutex to make sure that no calls are
       // processed while the session ID is changing
-      if (_shouldLock) release = await this.lock.acquire();
+      if (_shouldLock) {
+        release = await this.lock.acquire();
+
+        // Finish the payload by including the current session ID
+        payload['sess'] = this.sessionID;
+      }
 
       // Make the actual call with the complete payload
       const response = await this.client({
@@ -736,6 +745,7 @@ export class NX595ESecuritySystem {
           data: payload
         });
         this.log.debug("Initial request sent successfully.");
+        if (newReponse.status >= 300) this.log.error("Secondary request denied by server.");
         return newReponse;
       }
     } catch (error) {
