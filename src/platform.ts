@@ -1,6 +1,7 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
 import { retryDelayDuration } from "./NX595ESecuritySystem"
+import { delay } from "./utility"
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
@@ -47,30 +48,20 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     this.displayOutputSwitches = (this.config.displayOutputSwitches)? <Boolean>this.config.displayOutputSwitches: false;
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
-    this.securitySystem = new NX595ESecuritySystem(ip, username, pin, this.useHTTPS);
+    this.securitySystem = new NX595ESecuritySystem(ip, username, pin, log, this.useHTTPS);
+    this.log.debug('Initialized security system.');
 
-    this.log.debug('Finished initializing platform:', this.config.name);
-    this.login();
-  }
-
-  login() {
-    // When this event is fired it means Homebridge has restored all cached accessories from disk.
-    // Dynamic Platform plugins should only register new accessories after this event was fired,
-    // in order to ensure they weren't added to homebridge already. This event can also be used
-    // to start discovery of new accessories.
-    this.api.on('didFinishLaunching', () => {
+    this.api.on('didFinishLaunching', async () => {
       this.log.debug('Executed didFinishLaunching callback');
-      // run the method to discover / register your devices as accessories
-      this.securitySystem.login().then(() => {
-        try {
-          this.loggedIn = true;
-          this.discoverDevices();
-        } catch (error) {
-          this.loggedIn = false;
-          this.log.error((<Error>error).message);
-          this.setCatastrophe(this.accessories);
-          return;
-        }
+      try {
+        // Attempt to log in
+        await this.securitySystem.login();
+        this.loggedIn = true;
+        this.log.debug('Logged in successfully.');
+        this.log.debug('Discovering devices...');
+        // run the method to discover / register your devices as accessories
+        this.discoverDevices();
+        this.log.debug('Devices discovery complete.');
         this.areaSequences = new Array(this.securitySystem.getAreas().length);
         this.zoneSequences = new Array(this.securitySystem.getZones().length);
         this.zoneDeltas = new Array(this.securitySystem.getZones().length);
@@ -78,10 +69,11 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
         this.zoneSequences.fill(-1);
         this.zoneDeltas.fill(-1);
         setTimeout(this.updateAccessories.bind(this), this.pollTimer);
-      }).catch(err => {
-        this.log.error(err.message);
+      } catch (error) {
+        this.loggedIn = false;
+        this.log.error((<Error>error).message);
         this.setCatastrophe(this.accessories);
-      });
+      }
     });
   }
 
@@ -122,143 +114,141 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
       return;
     }
 
-    try { await this.securitySystem.poll(); }
-    catch (error) {
-      this.log.error((<Error>error).message);
-      setTimeout(this.updateAccessories.bind(this), this.pollTimer + retryDelayDuration);
-      return;
-    }
+    this.securitySystem.poll()
+    .then(() => {
+      this.securitySystem.getZones().forEach(zone => {
+        if (zone == undefined) return;
+        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
+        const zoneStatus = this.securitySystem.getZoneState(zone.bank);
+        if (this.zoneSequences[zone.bank] !== zone.sequence) {
+          this.zoneSequences[zone.bank] = zone.sequence;
+          if (accessoriesUpdated.length) {
+            accessoriesUpdated.forEach(accessory => {
+              if (accessory.context.device.type != DeviceType.area) {
+                if (this.displayBypassSwitches) {
+                  accService = accessory.getService(this.Service.Switch);
+                  if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(zone.isBypassed);
+                }
+                switch (accessory.context.device.type) {
+                  case DeviceType.radar: {
+                    if (zoneStatus) {
+                      this.log.debug('Persistence updated for zone', zone.bank);
+                      this.zoneDeltas[zone.bank] = Date.now();
+                    }
+                    break;
+                  }
+                  case DeviceType.smoke: {
+                    if (zoneStatus) {
+                      this.log.debug('Persistence updated for zone', zone.bank);
+                      this.zoneDeltas[zone.bank] = Date.now();
+                    }
+                    break;
+                  }
+                  default:
+                  case DeviceType.contact: {
+                    accService = accessory.getService(this.Service.ContactSensor);
+                    if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(zoneStatus);
+                    break;
+                  }
+                }
+              }
+            });
+          }
+        }
 
-    this.securitySystem.getZones().forEach(zone => {
-      if (zone == undefined) return;
-      const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === zone.bank);
-      const zoneStatus = this.securitySystem.getZoneState(zone.bank);
-      if (this.zoneSequences[zone.bank] !== zone.sequence) {
-        this.zoneSequences[zone.bank] = zone.sequence;
         if (accessoriesUpdated.length) {
           accessoriesUpdated.forEach(accessory => {
             if (accessory.context.device.type != DeviceType.area) {
-              if (this.displayBypassSwitches) {
-                accService = accessory.getService(this.Service.Switch);
-                if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(zone.isBypassed);
-              }
+              const currentDelta = Date.now() - this.zoneDeltas[zone.bank];
               switch (accessory.context.device.type) {
                 case DeviceType.radar: {
-                  if (zoneStatus) {
-                    this.log.debug('Persistence updated for zone ', zone.bank);
-                    this.zoneDeltas[zone.bank] = Date.now();
+                  accService = accessory.getService(this.Service.MotionSensor);
+                  if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.radarPersistence) {
+                    if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(true);
+                  } else {
+                    this.zoneDeltas[zone.bank] = -1;
+                    if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(false);
                   }
                   break;
                 }
                 case DeviceType.smoke: {
-                  if (zoneStatus) {
-                    this.log.debug('Persistence updated for zone ', zone.bank);
-                    this.zoneDeltas[zone.bank] = Date.now();
+                  accService = accessory.getService(this.Service.SmokeSensor);
+                  if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.smokePersistence) {
+                    if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(true);
+                  } else {
+                    this.zoneDeltas[zone.bank] = -1;
+                    if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(false);
                   }
                   break;
                 }
-                default:
-                case DeviceType.contact: {
-                  accService = accessory.getService(this.Service.ContactSensor);
-                  if (accService) accService.getCharacteristic(this.Characteristic.ContactSensorState).updateValue(zoneStatus);
+                default: {
                   break;
                 }
               }
             }
           });
         }
-      }
+      });
 
-      if (accessoriesUpdated.length) {
-        accessoriesUpdated.forEach(accessory => {
-          if (accessory.context.device.type != DeviceType.area) {
-            const currentDelta = Date.now() - this.zoneDeltas[zone.bank];
-            switch (accessory.context.device.type) {
-              case DeviceType.radar: {
-                accService = accessory.getService(this.Service.MotionSensor);
-                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.radarPersistence) {
-                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(true);
-                } else {
-                  this.zoneDeltas[zone.bank] = -1;
-                  if (accService) accService.getCharacteristic(this.Characteristic.MotionDetected).updateValue(false);
+      this.securitySystem.getAreas().forEach(area => {
+        if (this.areaSequences[area.bank] !== area.sequence) {
+          this.areaSequences[area.bank] = area.sequence;
+          const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === area.bank);
+          if (accessoriesUpdated.length) {
+            accessoriesUpdated.forEach(accessory => {
+              if (accessory.context.device.type === DeviceType.area) {
+                const status: string = this.securitySystem.getAreaStatus(area.bank);
+                const chimeState: boolean = this.securitySystem.getAreaChimeStatus(area.bank);
+                let value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
+                switch (status) {
+                  case AreaState.Status[AreaState.State.ALARM_FIRE]:
+                  case AreaState.Status[AreaState.State.ALARM_BURGLAR]:
+                  case AreaState.Status[AreaState.State.ALARM_PANIC]:
+                  case AreaState.Status[AreaState.State.ALARM_MEDICAL]: {
+                    value = this.Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED;
+                    break;
+                  }
+                  case AreaState.Status[AreaState.State.DELAY_EXIT_1]:
+                  case AreaState.Status[AreaState.State.DELAY_EXIT_2]:
+                  case AreaState.Status[AreaState.State.DISARMED]:
+                  case AreaState.Status[AreaState.State.NOT_READY]:
+                  case AreaState.Status[AreaState.State.SENSOR_BYPASS]:
+                  case AreaState.Status[AreaState.State.READY]: {
+                    value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
+                    break;
+                  }
+                  case AreaState.Status[AreaState.State.ARMED_STAY]: {
+                    value = this.Characteristic.SecuritySystemCurrentState.STAY_ARM;
+                    break;
+                  }
+                  case AreaState.Status[AreaState.State.DELAY_ENTRY]:
+                  case AreaState.Status[AreaState.State.ARMED_AWAY]: {
+                    value = this.Characteristic.SecuritySystemCurrentState.AWAY_ARM;
+                    break;
+                  }
+                  default: { break; }
                 }
-                break;
-              }
-              case DeviceType.smoke: {
-                accService = accessory.getService(this.Service.SmokeSensor);
-                if (this.zoneDeltas[zone.bank] >= 0 && currentDelta < this.smokePersistence) {
-                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(true);
-                } else {
-                  this.zoneDeltas[zone.bank] = -1;
-                  if (accService) accService.getCharacteristic(this.Characteristic.SmokeDetected).updateValue(false);
+                accService = accessory.getService(this.Service.Switch);
+                if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(chimeState);
+                accService = accessory.getService(this.Service.SecuritySystem);
+                if (accService) {
+                  if (status === AreaState.Status[AreaState.State.DELAY_EXIT_2] ||
+                  status === AreaState.Status[AreaState.State.DELAY_EXIT_1])
+                    accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(this.Characteristic.SecuritySystemCurrentState.AWAY_ARM);
+                  else
+                    accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(value);
+                  accService.getCharacteristic(this.Characteristic.SecuritySystemCurrentState).updateValue(value);
                 }
-                break;
               }
-              default: {
-                break;
-              }
-            }
+            });
           }
-        });
-      }
-    });
-
-    this.securitySystem.getAreas().forEach(area => {
-      if (this.areaSequences[area.bank] !== area.sequence) {
-        this.areaSequences[area.bank] = area.sequence;
-        const accessoriesUpdated = this.accessories.filter(accessory => accessory.context.device.bank === area.bank);
-        if (accessoriesUpdated.length) {
-          accessoriesUpdated.forEach(accessory => {
-            if (accessory.context.device.type === DeviceType.area) {
-              const status: string = this.securitySystem.getAreaStatus(area.bank);
-              const chimeState: boolean = this.securitySystem.getAreaChimeStatus(area.bank);
-              let value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
-              switch (status) {
-                case AreaState.Status[AreaState.State.ALARM_FIRE]:
-                case AreaState.Status[AreaState.State.ALARM_BURGLAR]:
-                case AreaState.Status[AreaState.State.ALARM_PANIC]:
-                case AreaState.Status[AreaState.State.ALARM_MEDICAL]: {
-                  value = this.Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED;
-                  break;
-                }
-                case AreaState.Status[AreaState.State.DELAY_EXIT_1]:
-                case AreaState.Status[AreaState.State.DELAY_EXIT_2]:
-                case AreaState.Status[AreaState.State.DISARMED]:
-                case AreaState.Status[AreaState.State.NOT_READY]:
-                case AreaState.Status[AreaState.State.SENSOR_BYPASS]:
-                case AreaState.Status[AreaState.State.READY]: {
-                  value = this.Characteristic.SecuritySystemCurrentState.DISARMED;
-                  break;
-                }
-                case AreaState.Status[AreaState.State.ARMED_STAY]: {
-                  value = this.Characteristic.SecuritySystemCurrentState.STAY_ARM;
-                  break;
-                }
-                case AreaState.Status[AreaState.State.DELAY_ENTRY]:
-                case AreaState.Status[AreaState.State.ARMED_AWAY]: {
-                  value = this.Characteristic.SecuritySystemCurrentState.AWAY_ARM;
-                  break;
-                }
-                default: { break; }
-              }
-              accService = accessory.getService(this.Service.Switch);
-              if (accService) accService.getCharacteristic(this.Characteristic.On).updateValue(chimeState);
-              accService = accessory.getService(this.Service.SecuritySystem);
-              if (accService) {
-                if (status === AreaState.Status[AreaState.State.DELAY_EXIT_2] ||
-                status === AreaState.Status[AreaState.State.DELAY_EXIT_1])
-                  accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(this.Characteristic.SecuritySystemCurrentState.AWAY_ARM);
-                else
-                  accService.getCharacteristic(this.Characteristic.SecuritySystemTargetState).updateValue(value);
-                accService.getCharacteristic(this.Characteristic.SecuritySystemCurrentState).updateValue(value);
-              }
-            }
-          });
         }
-      }
+      });
+    }).catch((error) => {
+      this.log.error((<Error>error).message);
+    }).finally(() => {
+      setTimeout(this.updateAccessories.bind(this), this.pollTimer);
     });
-
-    setTimeout(this.updateAccessories.bind(this), this.pollTimer);
   }
 
   /**

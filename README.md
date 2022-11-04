@@ -9,6 +9,7 @@
 
 [![npm](https://img.shields.io/npm/v/homebridge-caddx-interlogix/latest?label=latest)](https://www.npmjs.com/package/homebridge-caddx-interlogixÂ)
 [![npm](https://img.shields.io/npm/dt/homebridge-caddx-interlogix)](https://www.npmjs.com/package/homebridge-caddx-interlogix)
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 [![Paypal](https://img.shields.io/badge/paypal-donate-green.svg)](https://paypal.me/flareman?locale.x=en_US)
 
 </span>

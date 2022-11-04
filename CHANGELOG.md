@@ -6,9 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.9] - 2021-11-27
+### Added
+- homebridge-caddx-interlogix is now officially part of the homebridge verified program :v: Thank you all for your support and help!
+- The plugin now accepts the module network address both as an IP address and as a hostname
+- Added debug log messages for the entirety of network module management
+
+### Fixed
+- Request timeouts and errors were not handled properly; swapped HTTP request library from superagent to axios to mitigate, and changed the redirection/verification functions of axios to properly handle 30x redirects when the session expires
+- Added a mutex lock to the request mechanism to avoid duplicate session refreshes when two calls occur simultaneously and the session has expired, to eliminate redundant network calls to the module and improve throughput
+
+
 ## [1.2.8] - 2022-8-21
 ### Fixed
-- Added a plugin-wide hard-coded 3000 ms delay before reattempting a network request or a new vaule update when encountering a request error. There have been complaints about the plugin returning either socket end or 403 Forbidden errors sporadically; these are related to server function. It appears that the NX-595E server is flaky and can, under circumstances, get flooded with requests and bog down until it self-resolves. This delay should fix all this aberrant behavior. It should be noted that once initial login happens, all subsequent request attempts should by now result in a catchable error that does not lead the plugin to stopping responding, but rather force a delay before attempting to poll again. As long as the server is functioning, the accessories related to the plugin should start working again.
+- Added a plugin-wide hard-coded 3000 ms delay before reattempting a network request or a new value update when encountering a request error. There have been complaints about the plugin returning either socket end or 403 Forbidden errors sporadically; these are related to server function. It appears that the NX-595E server is flaky and can, under circumstances, get flooded with requests and bog down until it self-resolves. This delay should fix all this aberrant behavior. It should be noted that once initial login happens, all subsequent request attempts should by now result in a catchable error that does not lead the plugin to stopping responding, but rather force a delay before attempting to poll again. As long as the server is functioning, the accessories related to the plugin should start working again.
 
 
 ## [1.2.7] - 2022-8-12
@@ -18,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.6] - 2022-8-3
 ### Fixed
-- Network request mechanism was made more lenient; now the plugin will try to reconnect in case of network failure, before stopping responding gracefully (instead of bringing the entire homebridge instance crashing down with it). Likewise, after successfully logging in, errors will not cause the plugin to go non-responsive, defaulting to the last know values instead (and retrying during the next pollint attempt). Error reporting was made more robust; this version should fix the bugs introduced in v1.2.5.
+- Network request mechanism was made more lenient; now the plugin will try to reconnect in case of network failure, before stopping responding gracefully (instead of bringing the entire homebridge instance crashing down with it). Likewise, after successfully logging in, errors will not cause the plugin to go non-responsive, defaulting to the last know values instead (and retrying during the next polling attempt). Error reporting was made more robust; this version should fix the bugs introduced in v1.2.5.
 
 
 ## [1.2.5] - 2022-7-27
@@ -34,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.3] - 2022-7-25
 ### Changed
 - Reworked the entire error reporting mechanism to conform to homebridge's verified plugin program standards
-- Updated node dependency to LTS versions (v14.20.0 or 16.16.0 and above)
+- Updated node dependency to LTS versions (v14.20.1 or 16.16.0 and above)
 - Minor changes to README.md to clarify the way zone ignoring works
 
 ### Fixed
@@ -62,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2021-11-10
 ### Changed
-- SSL functionality has been disabled, as the NX-595E SSL version is depreciated and not supported by newer NodeJS/OpenSSL library versions; users are advised to log in to their systems and disable SSL
+- SSL functionality has been disabled, as the NX-595E SSL version is deprecated and not supported by newer NodeJS/OpenSSL library versions; users are advised to log in to their systems and disable SSL
 
 
 ## [1.1.9] - 2021-11-7
