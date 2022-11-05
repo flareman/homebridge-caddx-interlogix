@@ -637,12 +637,6 @@ export class NX595ESecuritySystem {
     try {
       const response = await this.makeRequest('user/zstate.xml', {'state': bank});
       const json = parser.parse(response.data)['response'];
-      if (response === undefined || json === undefined || json['zdat'] === undefined) {
-        this.log.error(response.request);
-        this.log.error(response.statusText);
-        this.log.error(response.data);
-        this.log.error(json);
-      }
       const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
       this.zonesBank[bank] = zdat;
     } catch (error) { throw(error); }
@@ -704,17 +698,19 @@ export class NX595ESecuritySystem {
       // Unless we are attempting to log in for the first time or if the session
       // has expired, we should wait on our mutex to make sure that no calls are
       // processed while the session ID is changing
-      if (_shouldLock) {
-        release = await this.lock.acquire();
+      if (_shouldLock) release = await this.lock.acquire();
 
-        // Finish the payload by including the current session ID
-        payload['sess'] = this.sessionID;
-      }
+      // Finish the payload by including the current session ID
+      // Fun fact: the NX-595E implementation of HTTP server *demands* that the
+      // session ID comes first in the payload, otherwise the call returns 302,
+      // therefore we have to create a local final payload with the 'sess' value
+      // first in the object before passing it to the axios client
+      const _payload = { ...(_shouldLock)?{ 'sess': this.sessionID }:{}, ...payload };
 
       // Make the actual call with the complete payload
       const response = await this.client({
         url: address,
-        data: payload
+        data: _payload
       });
 
       // If the response status code is in the 30x range, we have been sent
@@ -733,19 +729,19 @@ export class NX595ESecuritySystem {
         // only from the login function, so they are called by definition as not
         // locking, as they would deadlock the program in the first attempt to
         // refresh the session
-        this.log.debug("Session expired (status code " + response.status + "); attempting to reacquire...");
+        this.log.debug("Session expired; attempting to reacquire...");
         await this.login();
         this.log.debug("Reacquired session successfully.");
 
-        // We'll update the payload with the new session ID and try again
-        this.log.debug("Reattempting initial request...");
-        payload['sess'] = this.sessionID;
+        // We'll create a new local payload with the new session ID and retry
+        this.log.debug("Reattempting request...");
+        const _newPayload = { ...{ 'sess': this.sessionID }, ...payload };
         const newResponse = await this.client({
           url: address,
-          data: payload
+          data: _newPayload
         });
-        this.log.debug("Initial request sent successfully.");
-        if (newResponse.status >= 300) this.log.error("Secondary request denied by server with status code " + newResponse.status + ".");
+        this.log.debug("Request sent successfully.");
+        if (newResponse.status >= 300) throw new Error("Request denied by server with code " + newResponse.status);
         return newResponse;
       }
     } catch (error) {
