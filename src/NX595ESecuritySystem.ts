@@ -1,19 +1,9 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import * as Utilities from './utility';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { Logger } from 'homebridge';
 import * as parser from 'fast-xml-parser';
 import { Mutex, MutexInterface } from 'async-mutex';
-import { Vendor } from './definitions';
-import { Area } from './definitions';
-import { Zone } from './definitions';
-import { Output } from './definitions';
-import { SequenceResponse } from './definitions';
-import { AreaBank } from './definitions';
-import { AreaState } from './definitions';
-import { ZoneState } from './definitions';
-import { SecuritySystemAreaCommand } from './definitions';
-import { SecuritySystemZoneCommand } from './definitions';
+import { Vendor, Area, Zone, Output, SequenceResponse, AreaBank, AreaState, ZoneState, SecuritySystemAreaCommand, SecuritySystemZoneCommand } from './definitions';
 export const retryDelayDuration: number = 3000;
 
 export class NX595ESecuritySystem {
@@ -177,76 +167,6 @@ export class NX595ESecuritySystem {
           // Finally make the request
           await this.makeRequest('user/keyfunction.cgi', payload);
           this.log.debug("Command send successfully.");
-        }
-      }
-      return true;
-    } catch (error) { throw(error); }
-  }
-
-  async sendOutputCommand(command: Boolean, output: number) {
-    try {
-      if (this.sessionID === "") {
-        await this.login();
-        if (this.sessionID === "")throw(new Error('Could not send output command; not logged in'));
-      }
-
-      if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
-
-      // Prepare the payload according to details
-      const payload = {
-        'onum': output + 1,
-        'ostate': command
-      };
-
-      // Finally make the request
-      this.log.debug('Sending output command: ' + command + " for output: " + output + "...");
-      await this.makeRequest('user/output.cgi', payload);
-      this.log.debug("Command sent successfully.");
-
-      return true;
-    } catch (error) { throw(error); }
-  }
-
-  async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
-    try {
-      if (this.sessionID === "") {
-        await this.login();
-        if (this.sessionID === "") throw(new Error('Could not send zone command; not logged in'));
-      }
-
-      if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
-
-      // Load actual area banks to local table for ease of use
-      let actionableZones: number[] = [];
-      let actualZones: number[] = [];
-      for (let i of this.zones) {
-        if (i == undefined) continue;
-        actualZones.push(i.bank);
-      }
-
-      // Decipher input and prepare actionableAreas table for looping through
-      if (typeof(zones) == 'number') actionableZones.push(zones);
-      else if (Array.isArray(zones) && zones.length > 0) actionableZones = zones;
-      else actionableZones = actualZones;
-
-      // For every area in actionableAreas:
-      for (let i of actionableZones) {
-        // Check if the actual area exists
-        if (!actualZones.includes(i)) throw new Error('Specified area ' + i + ' not found');
-        else {
-          // Prepare the payload according to details
-          const payload = {
-            'comm': 82,
-            'data0': i
-          };
-
-          // At present the only zone command is zone bypass so no need to pass on an actual command
-          // payload['data1'] = String(command);
-
-          // Finally make the request
-          this.log.debug('Sending zone command: ' + command + " for zone: " + i + "...");
-          await this.makeRequest('user/zonefunction.cgi', payload);
-          this.log.debug("Command sent successfully.");
         }
       }
       return true;
@@ -752,6 +672,76 @@ export class NX595ESecuritySystem {
       // that does nothing ( () => {} ).
       release();
     }
+  }
+
+  async sendOutputCommand(command: Boolean, output: number) {
+    try {
+      if (this.sessionID === "") {
+        await this.login();
+        if (this.sessionID === "")throw(new Error('Could not send output command; not logged in'));
+      }
+
+      if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
+
+      // Prepare the payload according to details
+      const payload = {
+        'onum': output + 1,
+        'ostate': command
+      };
+
+      // Finally make the request
+      this.log.debug('Sending output command: ' + command + " for output: " + output + "...");
+      await this.makeRequest('user/output.cgi', payload);
+      this.log.debug("Command sent successfully.");
+
+      return true;
+    } catch (error) { throw(error); }
+  }
+
+  async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
+    try {
+      if (this.sessionID === "") {
+        await this.login();
+        if (this.sessionID === "") throw(new Error('Could not send zone command; not logged in'));
+      }
+
+      if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
+
+      // Load actual area banks to local table for ease of use
+      let actionableZones: number[] = [];
+      let actualZones: number[] = [];
+      for (let i of this.zones) {
+        if (i == undefined) continue;
+        actualZones.push(i.bank);
+      }
+
+      // Decipher input and prepare actionableAreas table for looping through
+      if (typeof(zones) == 'number') actionableZones.push(zones);
+      else if (Array.isArray(zones) && zones.length > 0) actionableZones = zones;
+      else actionableZones = actualZones;
+
+      // For every area in actionableAreas:
+      for (let i of actionableZones) {
+        // Check if the actual area exists
+        if (!actualZones.includes(i)) throw new Error('Specified area ' + i + ' not found');
+        else {
+          // Prepare the payload according to details
+          const payload = {
+            'comm': 82,
+            'data0': i
+          };
+
+          // At present the only zone command is zone bypass so no need to pass on an actual command
+          // payload['data1'] = String(command);
+
+          // Finally make the request
+          this.log.debug('Sending zone command: ' + command + " for zone: " + i + "...");
+          await this.makeRequest('user/zonefunction.cgi', payload);
+          this.log.debug("Command sent successfully.");
+        }
+      }
+      return true;
+    } catch (error) { throw(error); }
   }
 
   // All the following are accessor functions for system details

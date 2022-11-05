@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2018", // ~node10
+    "target": "ES2018",
     "module": "CommonJS",
     "lib": [
       "es2015",

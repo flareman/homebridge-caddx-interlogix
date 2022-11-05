@@ -1,16 +1,8 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { NX595ESecuritySystem } from "./NX595ESecuritySystem";
-import { retryDelayDuration } from "./NX595ESecuritySystem"
-import { delay } from "./utility"
-
+import { AreaState, DeviceType } from './definitions';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { NX595EPlatformSecurityAreaAccessory } from './platformAccessory';
-import { NX595EPlatformContactSensorAccessory } from './platformAccessory';
-import { NX595EPlatformOutputAccessory } from './platformAccessory';
-import { NX595EPlatformSmokeSensorAccessory } from './platformAccessory';
-import { NX595EPlatformRadarAccessory } from './platformAccessory';
-import { AreaState } from './definitions';
-import { DeviceType } from './definitions';
+import { NX595EPlatformSecurityAreaAccessory, NX595EPlatformContactSensorAccessory, NX595EPlatformOutputAccessory, NX595EPlatformSmokeSensorAccessory, NX595EPlatformRadarAccessory } from './platformAccessory';
 
 /**
  * HomebridgePlatform
@@ -92,11 +84,11 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     return this.loggedIn;
   }
 
-  setCatastrophe(accessories) {
+  setCatastrophe(accessories: any[]) {
     accessories.forEach((accessory) => {
       accessory.services
-      .filter((service) => service.UUID != this.Service.AccessoryInformation)
-      .forEach((service) => {
+      .filter((service: any) => service.UUID != this.Service.AccessoryInformation)
+      .forEach((service: { characteristics: any[]; }) => {
         service.characteristics.forEach((characteristic) => {
           characteristic.updateValue(new Error("Platform failed to initialize"));
           // characteristic.on('get', (next) => {
@@ -341,7 +333,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     // multiple overrides for the same zone index, only the last one applies
     const declaredOverrides = (this.config.override) ? this.config.override : [];
     let overrides: any[] = new Array(ignores.length).fill(undefined);
-    declaredOverrides.forEach(element => {
+    declaredOverrides.forEach((element: any) => {
       if (element.index < 1 || element.index > overrides.length) {
         throw new Error("Override declared for non-existent zone with index " + element.index + "!");
       }
