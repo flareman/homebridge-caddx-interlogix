@@ -11,7 +11,7 @@ export enum SecuritySystemAreaCommand {
 }
 
 export enum SecuritySystemZoneCommand {
-  ZONE_BYPASS = 1
+  ZONE_BYPASS = 82
 }
 
 export enum SecuritySystemCLIScenes {

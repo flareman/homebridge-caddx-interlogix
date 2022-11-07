@@ -1,17 +1,9 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import * as Utilities from './utility';
-import * as superagent from 'superagent';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { Logger } from 'homebridge';
 import * as parser from 'fast-xml-parser';
-import { Vendor } from './definitions';
-import { Area } from './definitions';
-import { Zone } from './definitions';
-import { Output } from './definitions';
-import { SequenceResponse } from './definitions';
-import { AreaBank } from './definitions';
-import { AreaState } from './definitions';
-import { ZoneState } from './definitions';
-import { SecuritySystemAreaCommand } from './definitions';
-import { SecuritySystemZoneCommand } from './definitions';
+import { Mutex, MutexInterface } from 'async-mutex';
+import { Vendor, Area, Zone, Output, SequenceResponse, AreaBank, AreaState, ZoneState, SecuritySystemAreaCommand, SecuritySystemZoneCommand } from './definitions';
 export const retryDelayDuration: number = 3000;
 
 export class NX595ESecuritySystem {
@@ -19,7 +11,11 @@ export class NX595ESecuritySystem {
   protected passcode: string;
   protected IPAddress: string;
   protected httpPrefix: string;
+  protected log: Logger;
 
+  protected client: AxiosInstance;
+
+  private readonly lock: Mutex = new Mutex();
   protected sessionID = '';
   protected vendor: Vendor = Vendor.UNDEFINED;
   protected version = '';
@@ -38,36 +34,61 @@ export class NX595ESecuritySystem {
   protected zonesBank: number[][] = [];
   protected _zvbank: number[][] = [];
 
-  constructor(address: string, userid: string, pin: string, useHTTPS: Boolean = false) {
+  constructor(address: string, userid: string, pin: string, log: Logger, useHTTPS: Boolean = false) {
     this.IPAddress = address;
     this.username = userid;
     this.passcode = pin;
+    this.log = log;
     this.httpPrefix = (useHTTPS)?'https://':'http://';
+    this.client = axios.create({
+      baseURL: this.httpPrefix + this.IPAddress,
+      timeout: 10000,
+      method: "post",
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded'
+      },
+      // Makes sure that 30x status codes are not considered errors so that we
+      // cand handle them properly when making network calls, but at the same
+      // time forbid the axios library from automatically following redirects
+      maxRedirects: 0,
+      validateStatus: function (status) {
+        return (status >= 200 && status < 400);
+      }
+    });
+    this.client.interceptors.response.use(
+      response => response,
+      error => {
+        // We really want to throw the error so it is handled and we don't get
+        // an unhandledrejection error. By throwing here, we are handling the
+        // rejection, and bubbling up to the closest error handler (try/catch or
+        // catch method call on a promise).
+        throw error;
+      }
+    );
   }
 
   async login() {
-    try {
-      // Parameter checks before logging in
-      if (!(Utilities.CheckIPAddress(this.IPAddress))) { throw new Error('Not a valid IP address'); }
-      if (typeof this.username == 'undefined' || this.username == "") { throw new Error('Did not specify a username'); }
-      if (typeof this.passcode == 'undefined' || this.passcode == "") { throw new Error('Did not specify a user PIN'); }
+    // Parameter checks before logging in
+    if (!(Utilities.checkAddress(this.IPAddress))) { throw new Error('Not a valid IP address or hostname'); }
+    if (typeof this.username == 'undefined' || this.username == "") { throw new Error('Did not specify a username'); }
+    if (typeof this.passcode == 'undefined' || this.passcode == "") { throw new Error('Did not specify a user PIN'); }
 
-      // Attempting login
-      let payload = ({lgname: this.username, lgpin: this.passcode});
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/login.cgi', payload);
+    // Attempting login
+    this.log.debug('Attempting login...');
+    const payload = {'lgname': this.username, 'lgpin': this.passcode};
+    try {
+      // Lock the session ID mutex; we are attempting to log in, so we can't
+      // have requests being made before acquiring a new session
+      const response = await this.makeRequest('login.cgi', payload, false);
+      if (response == undefined) throw new Error("Login unsuccessful");
+
       let correctLine: string = "";
-      const loginPageLine: number = 25;
       const sessionIDLine: number = 28;
       const vendorDetailsLine: number = 6;
-      let data = response.text;
+      const data = response.data;
       let lines1 = data.split("\n");
       let lines2 = lines1;
       let lines3 = lines1;
-
-      // Gotta check for successful login
-      correctLine = lines1[loginPageLine].trim();
-      if (correctLine.substring(25, 32) === 'Sign in')
-            throw new Error('Login Unsuccessful');
 
       // Login confirmed, parsing session ID
       correctLine = lines2[sessionIDLine].trim();
@@ -75,7 +96,7 @@ export class NX595ESecuritySystem {
 
       // Parsing panel vendor and software details
       correctLine = lines3[vendorDetailsLine].trim();
-      let vendorDetails = correctLine.split(/[/_-]/);
+      const vendorDetails = correctLine.split(/[/_-]/);
       switch (vendorDetails[2]) {
         case "CN": { this.vendor = Vendor.COMNAV; break; }
         default: { throw new Error("Unrecognized vendor"); }
@@ -84,32 +105,40 @@ export class NX595ESecuritySystem {
       this.release = vendorDetails[4];
 
       this.lastUpdate = new Date();
+      this.log.debug('Logged in successfully.');
+
+      // Our new session is acquired and the session ID is stored, so we can
+      // unlock the mutex; the next function calls rely on network requests,
+      // so if the mutex stays locked we are heading straight into a deadlock
 
       // Start retrieving area and zone details; pass through the initial Response
       await this.retrieveAreas(response);
       await this.retrieveZones();
       await this.retrieveOutputs();
-
-      return (true);
-    } catch (error) { throw(error); }
+    } catch (error) {
+      this.sessionID = "";
+      // Make sure to unlock the mutex to avoid potential deadlocks
+      throw (error);
+    }
   }
 
   async logout() {
-    try {
-      if (this.sessionID === "")
-        throw(new Error('Could not log out; not logged in'));
+      if (this.sessionID === "") return;
 
       // Logout gracefully
-      await this.makeRequest(this.httpPrefix + this.IPAddress + '/logout.cgi', {});
       this.sessionID = "";
-    } catch (error) { return (false); }
+      await this.makeRequest('logout.cgi', {}, false).catch(() => {});
+      this.log.debug('Logged out.');
   }
 
   async sendAreaCommand(command: SecuritySystemAreaCommand = SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, areas: number[] | number = []) {
     try {
-      if (this.sessionID === "" && !(this.login()))
-        throw(new Error('Could not send area command; not logged in'));
-      if (!(command in SecuritySystemAreaCommand)) throw new Error('Invalid alarm state ' + command);
+      if (this.sessionID === "") {
+        await this.login();
+        if (this.sessionID === "") throw(new Error('Could not send area command; not logged in'));
+      }
+
+      if (!(command in SecuritySystemAreaCommand)) throw new Error('Invalid command ' + command);
 
       // Load actual area banks to local table for ease of use
       let actionableAreas: number[] = [];
@@ -127,105 +156,44 @@ export class NX595ESecuritySystem {
         if (!actualAreas.includes(i)) throw new Error('Specified area ' + i + ' not found');
         else {
           // Prepare the payload according to details
-          type payloadType = {[key: string]: string};
-          let payload: payloadType = {};
-          payload['sess'] = this.sessionID;
-          payload['comm'] = '80';
-          payload['data0'] = '2';
-          payload['data1'] = String(1 << i % 8);
-          payload['data2'] = String(command);
+          const payload = {
+            'comm': 80,
+            'data0': 2,
+            'data1': (1 << i % 8),
+            'data2': command
+          };
 
+          this.log.debug('Sending area command: ' + command + " for area: " + i + "...");
           // Finally make the request
-          await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/keyfunction.cgi', payload);
+          await this.makeRequest('user/keyfunction.cgi', payload);
+          this.log.debug("Command send successfully.");
         }
       }
       return true;
     } catch (error) { throw(error); }
   }
 
-  async sendOutputCommand(command: Boolean, output: number) {
-    try {
-      if (this.sessionID === "" && !(this.login()))
-        throw(new Error('Could not send output command; not logged in'));
-
-      if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
-
-      // Prepare the payload according to details
-      type payloadType = {[key: string]: string};
-      let payload: payloadType = {};
-      payload['sess'] = this.sessionID;
-      payload['onum'] = String(output+1);
-      payload['ostate'] = (command)?"1":"0";
-
-      // Finally make the request
-      await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/output.cgi', payload);
-
-      return true;
-    } catch (error) { throw(error); }
-  }
-
-  async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
-    try {
-      if (this.sessionID === "" && !(this.login()))
-        throw(new Error('Could not send zone command; not logged in'));
-      if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
-
-      // Load actual area banks to local table for ease of use
-      let actionableZones: number[] = [];
-      let actualZones: number[] = [];
-      for (let i of this.zones) {
-        if (i == undefined) continue;
-        actualZones.push(i.bank);
-      }
-
-      // Decipher input and prepare actionableAreas table for looping through
-      if (typeof(zones) == 'number') actionableZones.push(zones);
-      else if (Array.isArray(zones) && zones.length > 0) actionableZones = zones;
-      else actionableZones = actualZones;
-
-      // For every area in actionableAreas:
-      for (let i of actionableZones) {
-        // Check if the actual area exists
-        if (!actualZones.includes(i)) throw new Error('Specified area ' + i + ' not found');
-        else {
-          // Prepare the payload according to details
-          type payloadType = {[key: string]: string};
-          let payload: payloadType = {};
-          payload['sess'] = this.sessionID;
-          payload['comm'] = '82';
-          payload['data0'] = i.toString();
-          // At present the only zone command is zone bypass so no need to pass on an actual command
-          // payload['data1'] = String(command);
-
-          // Finally make the request
-          await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zonefunction.cgi', payload);
-        }
-      }
-      return true;
-    } catch (error) { throw(error); }
-  }
-
-  private async retrieveAreas (response: superagent.Response | undefined = undefined) {
+  private async retrieveAreas (response: AxiosResponse | undefined = undefined) {
     if (this.sessionID == "")
       throw(new Error('Could not retrieve areas; not logged in'));
 
     try {
+      this.log.debug("Retrieving areas...");
       // If we are passed an already loaded Response use that, otherwise reload area.htm
       if (response == undefined) {
-        response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/area.htm', {'sess': this.sessionID})
-        if (!response) throw new Error('Panel response returned as undefined');
+        response = await this.makeRequest('user/area.htm', { "sess": this.sessionID }, false);
       }
 
       // Get area sequence
-      let regexMatch: any = response.text.match(/var\s+areaSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
+      let regexMatch: any = response.data.match(/var\s+areaSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
       let sequence: number[] = regexMatch[1].split(',');
 
       // Get area states
-      regexMatch = response.text.match(/var\s+areaStatus\s+=\s+new\s+Array\(([\d,]+)\);/);
+      regexMatch = response.data.match(/var\s+areaStatus\s+=\s+new\s+Array\(([\d,]+)\);/);
       let bank_states = regexMatch[1].split(',');
 
       // Get area names
-      regexMatch = response.text.match(/var\s+areaNames\s+=\s+new\s+Array\((\"(.+)\")\);/);
+      regexMatch = response.data.match(/var\s+areaNames\s+=\s+new\s+Array\((\"(.+)\")\);/);
       let area_names: string[] = regexMatch[1].split(',');
       area_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
 
@@ -260,33 +228,104 @@ export class NX595ESecuritySystem {
       });
 
       if (this.areas.length == 0) throw new Error('No areas found; check your installation and/or user permissions');
+
+      this.log.debug("Retrieved " + this.areas.length + " areas successfully.");
       this.processAreas();
     } catch (error) { throw(error); }
 
-    return (true);
+    return;
   }
 
-  private async retrieveOutputs (response: superagent.Response | undefined = undefined) {
+  private async retrieveZones() {
+    if (this.sessionID == "")
+      throw(new Error('Could not retrieve zones; not logged in'));
+
+    try {
+      this.log.debug("Retrieving zones...");
+      // Retrieve zones.htm for parsing
+      const response = await this.makeRequest('user/zones.htm', { "sess": this.sessionID }, false);
+
+      // Get Zone sequences from response and store in class instance
+      let regexMatch: any = response.data.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
+      this.zonesSequence = regexMatch[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
+
+      // Get Zone banks from response and store in class instance
+      this.zonesBank.length = 0;
+      regexMatch = response.data.match(/var\s+zoneStatus\s+=\s+new\s+Array\((.*)\);/);
+      regexMatch = regexMatch[1].matchAll(/(?:new\s+)?Array\((?<states>[^)]+)\)\s*(?=$|,\s*(?:new\s+)?Array\()/g);
+      for (const bank of regexMatch) {
+        this.zonesBank.push(bank[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number));
+      }
+
+      // Retrieve zone names
+      regexMatch = response.data.match(/var zoneNames\s*=\s*(?:new\s+)?Array\(([^)]+)\).*/);
+      let zone_names: string[] = regexMatch[1].split(',');
+      zone_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
+
+      // Firmware versions from 0.106 below don't allow for zone naming, so check for that
+      let zoneNaming: boolean = (parseFloat(this.version) > 0.106) ? true : false;
+
+      // Finally store the zones
+      // Reset class zones tables...
+      this.zones.length = 0;
+
+      // ... and populate it from scratch
+      this.zoneNameCount = zone_names.length;
+      this.zones = Array(this.zoneNameCount).fill(undefined);
+      zone_names.forEach((name, i) => {
+        // If the name is "!" it's an empty area; ignore it
+        if (name == "%21" || name == "!" || name == "%2D" || name == "-" || (zoneNaming && name == "")) {
+          i++;
+          return;
+        }
+
+        // Create a new Zone object and populate it with the zone details, then push it
+        let newZone: Zone = {
+          bank: i,
+          associatedArea: -1,
+          name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ('Sensor ' + (i+1))),
+          priority: 6,
+          sequence: 0,
+          bank_state: [],
+          status: "",
+          isBypassed: false,
+          autoBypass: false
+        };
+
+        this.zones[i] = newZone;
+      });
+
+      this.log.debug("Retrieved " + this.zones.length + " zones successfully.");
+      this.processZones();
+    } catch (error) { throw(error); }
+
+    return;
+  }
+
+  private async retrieveOutputs (response: AxiosResponse | undefined = undefined) {
     if (this.sessionID == "")
       throw(new Error('Could not retrieve outputs; not logged in'));
 
     try {
+      this.log.debug("Retrieving outputs...");
       // If we are passed an already loaded Response use that, otherwise reload outputs.htm
       if (response == undefined) {
-        response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outputs.htm', {'sess': this.sessionID})
-        if (!response) throw new Error('Panel response returned as undefined');
+        response = await this.makeRequest('user/outputs.htm', { "sess": this.sessionID }, false);
       }
+
+      if (response == undefined)
+        throw new Error('Response came back undefined from the panel');
 
       // Reset class outputs tables...
       this.outputs.length = 0;
 
       // Get output names
-      let regexMatch: any = response.text.matchAll(/var\s+oname\d+\s+=\s+decodeURIComponent\s*\(\s*decode_utf8\s*\(\s*\"(.*)\"\)\);/g);
+      let regexMatch: any = response.data.matchAll(/var\s+oname\d+\s+=\s+decodeURIComponent\s*\(\s*decode_utf8\s*\(\s*\"(.*)\"\)\);/g);
       let outputNames: string[] = [];
       for (const name of regexMatch) outputNames.push(name[1]);
 
       // Get output values
-      regexMatch = response.text.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
+      regexMatch = response.data.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
       let outputValues: Boolean[] = [];
       for (const value of regexMatch) outputValues.push(+(value[1]) == 1);
 
@@ -302,7 +341,8 @@ export class NX595ESecuritySystem {
       }
     } catch (error) { throw(error); }
 
-    return (true);
+    this.log.debug("Retrieved " + this.outputs.length + " outputs successfully.");
+    return;
   }
 
   private processAreas() {
@@ -392,71 +432,7 @@ export class NX595ESecuritySystem {
       }
     });
 
-    return (true);
-  }
-
-  private async retrieveZones() {
-    if (this.sessionID == "")
-      throw(new Error('Could not retrieve zones; not logged in'));
-
-    try {
-      // Retrieve zones.htm for parsing
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zones.htm', {'sess': this.sessionID});
-
-      // Get Zone sequences from response and store in class instance
-      let regexMatch: any = response.text.match(/var\s+zoneSequence\s+=\s+new\s+Array\(([\d,]+)\);/);
-      this.zonesSequence = regexMatch[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
-
-      // Get Zone banks from response and store in class instance
-      this.zonesBank.length = 0;
-      regexMatch = response.text.match(/var\s+zoneStatus\s+=\s+new\s+Array\((.*)\);/);
-      regexMatch = regexMatch[1].matchAll(/(?:new\s+)?Array\((?<states>[^)]+)\)\s*(?=$|,\s*(?:new\s+)?Array\()/g);
-      for (const bank of regexMatch) {
-        this.zonesBank.push(bank[1].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number));
-      }
-
-      // Retrieve zone names
-      regexMatch = response.text.match(/var zoneNames\s*=\s*(?:new\s+)?Array\(([^)]+)\).*/);
-      let zone_names: string[] = regexMatch[1].split(',');
-      zone_names.forEach((item, i, arr) => { arr[i] = decodeURI(item.replace(/['"]+/g, '')); })
-
-      // Firmware versions from 0.106 below don't allow for zone naming, so check for that
-      let zoneNaming: boolean = (parseFloat(this.version) > 0.106) ? true : false;
-
-      // Finally store the zones
-      // Reset class zones tables...
-      this.zones.length = 0;
-
-      // ... and populate it from scratch
-      this.zoneNameCount = zone_names.length;
-      this.zones = Array(this.zoneNameCount).fill(undefined);
-      zone_names.forEach((name, i) => {
-        // If the name is "!" it's an empty area; ignore it
-        if (name == "%21" || name == "!" || name == "%2D" || name == "-" || (zoneNaming && name == "")) {
-          i++;
-          return;
-        }
-
-        // Create a new Zone object and populate it with the zone details, then push it
-        let newZone: Zone = {
-          bank: i,
-          associatedArea: -1,
-          name: (zoneNaming?(name == "" ? 'Sensor ' + (i+1) : name) : ('Sensor ' + (i+1))),
-          priority: 6,
-          sequence: 0,
-          bank_state: [],
-          status: "",
-          isBypassed: false,
-          autoBypass: false
-        };
-
-        this.zones[i] = newZone;
-      });
-
-      this.processZones();
-    } catch (error) { throw(error); }
-
-    return (true);
+    return;
   }
 
   private processZones() {
@@ -505,7 +481,7 @@ export class NX595ESecuritySystem {
       }
 
       // Update our sequence
-      let sequence: number = zone.bank_state.join() !== this._zvbank[zone.bank].join() ? this.nextSequence(zone.sequence) : zone.sequence;
+      let sequence: number = zone.bank_state.join() !== this._zvbank[zone.bank].join() ? Utilities.nextSequence(zone.sequence) : zone.sequence;
 
       // Update the zone with details
       zone.priority = priority;
@@ -517,7 +493,7 @@ export class NX595ESecuritySystem {
       zone.associatedArea = index;
     });
 
-    return (true);
+    return;
   }
 
   async poll() {
@@ -527,14 +503,12 @@ export class NX595ESecuritySystem {
     // needs updating, but it is up to the user to call the corresponding
     // update functions to perform the actual update
 
-    if (this.sessionID == "") {
-      console.log('Could not poll system; not logged in');
+    if (this.sessionID == "")
       return false;
-    }
 
     try {
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/seq.xml', {'sess': this.sessionID});
-      const json = parser.parse(response.text)['response'];
+      const response = await this.makeRequest('user/seq.xml');
+      const json = parser.parse(response.data)['response'];
       const seqResponse: SequenceResponse = {
         areas: typeof(json['areas']) == 'number'? [json['areas']]: json['areas'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number),
         zones: typeof(json['zones']) == 'number'? [json['zones']]: json['zones'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number)
@@ -570,9 +544,9 @@ export class NX595ESecuritySystem {
       // Trigger zone and area updates according to changes detected
       if (performZoneUpdate) this.processZones();
       if (performAreaUpdate) this.processAreas();
-    } catch (error) { throw(error); }
+    } catch (error) { throw(new Error("Error while polling: " + (<Error>error).message)); }
 
-    return (true);
+    return;
   }
 
   private async zoneStatusUpdate(bank: number) {
@@ -581,13 +555,13 @@ export class NX595ESecuritySystem {
 
     // Fetch zone update
     try {
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/zstate.xml', {'sess': this.sessionID, 'state': bank});
-      const json = parser.parse(response.text)['response'];
+      const response = await this.makeRequest('user/zstate.xml', {'state': bank});
+      const json = parser.parse(response.data)['response'];
       const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
       this.zonesBank[bank] = zdat;
     } catch (error) { throw(error); }
 
-    return (true);
+    return;
   }
 
   private async outputStatusUpdate() {
@@ -596,17 +570,16 @@ export class NX595ESecuritySystem {
 
     // Fetch zone update
     try {
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/outstat.xml', {'sess': this.sessionID});
-      const json = parser.parse(response.text)['response'];
+      const response = await this.makeRequest('user/outstat.xml');
+      const json = parser.parse(response.data)['response'];
       const values = Object.values(json);
       for (let i: number = 0; i < this.outputs.length; i++) {
         this.outputs[i].status = (values[i] == 0)?false:true;
       }
     } catch (error) { throw(error); }
 
-    return (true);
+    return;
   }
-
 
   private async areaStatusUpdate(bank: number) {
     if (this.sessionID == "")
@@ -614,8 +587,8 @@ export class NX595ESecuritySystem {
 
     // Fetch area update
     try {
-      const response = await this.makeRequest(this.httpPrefix + this.IPAddress + '/user/status.xml', {'sess': this.sessionID, 'arsel': bank});
-      const json = parser.parse(response.text)['response'];
+      const response = await this.makeRequest('user/status.xml', {'arsel': bank});
+      const json = parser.parse(response.data)['response'];
       if (json.hasOwnProperty('sysflt')) this.__extra_area_status = json['sysflt'].split('\n');
       else this.__extra_area_status = [];
       this.areas[bank].bank_state.length = 0;
@@ -624,53 +597,154 @@ export class NX595ESecuritySystem {
       }
     } catch (error) { throw(error); }
 
-    return (true);
+    return;
   }
 
-  private nextSequence (last: number) {
-    if (last < 256)
-      return (last + 1);
-    return 1;
-  }
+  // This is a helper function that handles all network requests necessary,
+  // from logging in to polling for system changes and issuing area and zone
+  // commands. The payload contains all necessary parameters for the actual
+  // request, except for the session ID, which is supplied before the call
+  // itself takes place. attemptLogin is a special flag that is set to true
+  // only when calling makeRequest from the login and logout functions, and
+  // is used to check for invalid logins and to bypass the mutex lock for
+  // acquiring a new session on expiration
+  private async makeRequest(address: string, payload = {}, shouldLock = true) {
+    let _shouldLock = shouldLock;
+    let release: MutexInterface.Releaser = (() => {});
 
-  private async makeRequest(address: string, payload = {}) {
-    let response: any;
     try {
-      response = await superagent.post(address).type('form').send(payload).redirects(0);
+      if (this.sessionID === "") _shouldLock = false;
+
+      // Unless we are attempting to log in for the first time or if the session
+      // has expired, we should wait on our mutex to make sure that no calls are
+      // processed while the session ID is changing
+      if (_shouldLock) release = await this.lock.acquire();
+
+      // Finish the payload by including the current session ID
+      // Fun fact: the NX-595E implementation of HTTP server *demands* that the
+      // session ID comes first in the payload, otherwise the call returns 302,
+      // therefore we have to create a local final payload with the 'sess' value
+      // first in the object before passing it to the axios client
+      const _payload = { ...(_shouldLock)?{ 'sess': this.sessionID }:{}, ...payload };
+
+      // Make the actual call with the complete payload
+      const response = await this.client({
+        url: address,
+        data: _payload
+      });
+
+      // If the response status code is in the 30x range, we have been sent
+      // back to the login page, which - in turn - means that either the session
+      // has expired, or we actually attempted to log in and our login info was
+      // invalid; in all other cases, return the response to the caller
+      if (response.status < 300) return response;
+      else {
+        // If we are attempting to log in, the credentials provided were invalid
+        // and we have to abort...
+        if (!_shouldLock) throw new Error("Login unsuccessful.");
+
+        // ... otherwise our session has expired and we need to log in again to
+        // refresh it; bear in mind that the three retrieving functions of the
+        // plugin (retrieveAreas, retrieveZones and retrieveOutputs) are called
+        // only from the login function, so they are called by definition as not
+        // locking, as they would deadlock the program in the first attempt to
+        // refresh the session
+        this.log.debug("Session expired; attempting to reacquire...");
+        await this.login();
+        this.log.debug("Reacquired session successfully.");
+
+        // We'll create a new local payload with the new session ID and retry
+        this.log.debug("Reattempting request...");
+        const _newPayload = { ...{ 'sess': this.sessionID }, ...payload };
+        const newResponse = await this.client({
+          url: address,
+          data: _newPayload
+        });
+        this.log.debug("Request sent successfully.");
+        if (newResponse.status >= 300) throw new Error("Request denied by server with code " + newResponse.status);
+        return newResponse;
+      }
     } catch (error) {
-      const err: superagent.Response.error = error;
-      if ((err.status / 100 | 0) == 3) {
-          try {
-            await Utilities.delay(retryDelayDuration);
-            await this.login();
-            (<any>payload)['sess'] = this.sessionID;
-            response = await this.makeRequest(address, payload);
-          } catch (error) {
-            throw(error);
-          }
-      } else if (Utilities.ERROR_CODES.has(err.code)) {
-          try {
-            await Utilities.delay(retryDelayDuration);
-            response = await superagent.post(address).type('form').send(payload).redirects(0);
-          } catch (error) {
-            const err2: superagent.Response.error = error;
-            if ((err2.status / 100 | 0) == 3) {
-                try {
-                  await Utilities.delay(retryDelayDuration);
-                  await this.login();
-                  (<any>payload)['sess'] = this.sessionID;
-                  response = await this.makeRequest(address, payload);
-                } catch (error) {
-                  throw(error);
-                }
-            } else throw(error);
-          }
-        } else throw(error);
+      throw error;
+    } finally {
+      // Call release before exiting the function; if a lock was requested, it
+      // will unlock the mutex, otherwise it will call an empty arrow function
+      // that does nothing ( () => {} ).
+      release();
+    }
+  }
+
+  async sendOutputCommand(command: Boolean, output: number) {
+    try {
+      if (this.sessionID === "") {
+        await this.login();
+        if (this.sessionID === "")throw(new Error('Could not send output command; not logged in'));
       }
 
-    return response;
+      if ((output >= this.outputs.length) || (output < 0)) throw new Error('Specified output ' + output + ' is out of bounds');
+
+      // Prepare the payload according to details
+      const payload = {
+        'onum': output + 1,
+        'ostate': command
+      };
+
+      // Finally make the request
+      this.log.debug('Sending output command: ' + command + " for output: " + output + "...");
+      await this.makeRequest('user/output.cgi', payload);
+      this.log.debug("Command sent successfully.");
+
+      return true;
+    } catch (error) { throw(error); }
   }
 
+  async sendZoneCommand(command: SecuritySystemZoneCommand = SecuritySystemZoneCommand.ZONE_BYPASS, zones: number[] | number = []) {
+    try {
+      if (this.sessionID === "") {
+        await this.login();
+        if (this.sessionID === "") throw(new Error('Could not send zone command; not logged in'));
+      }
+
+      if (!(command in SecuritySystemZoneCommand)) throw new Error('Invalid zone state ' + command);
+
+      // Load actual area banks to local table for ease of use
+      let actionableZones: number[] = [];
+      let actualZones: number[] = [];
+      for (let i of this.zones) {
+        if (i == undefined) continue;
+        actualZones.push(i.bank);
+      }
+
+      // Decipher input and prepare actionableAreas table for looping through
+      if (typeof(zones) == 'number') actionableZones.push(zones);
+      else if (Array.isArray(zones) && zones.length > 0) actionableZones = zones;
+      else actionableZones = actualZones;
+
+      // For every area in actionableAreas:
+      for (let i of actionableZones) {
+        // Check if the actual area exists
+        if (!actualZones.includes(i)) throw new Error('Specified area ' + i + ' not found');
+        else {
+          // Prepare the payload according to details
+          const payload = {
+            'comm': 82,
+            'data0': i
+          };
+
+          // At present the only zone command is zone bypass so no need to pass on an actual command
+          // payload['data1'] = String(command);
+
+          // Finally make the request
+          this.log.debug('Sending zone command: ' + command + " for zone: " + i + "...");
+          await this.makeRequest('user/zonefunction.cgi', payload);
+          this.log.debug("Command sent successfully.");
+        }
+      }
+      return true;
+    } catch (error) { throw(error); }
+  }
+
+  // All the following are accessor functions for system details
   getZones(): Zone[] {
     return this.zones;
   }

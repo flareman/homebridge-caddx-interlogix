@@ -33,8 +33,15 @@
         "title": "IP address",
         "type": "string",
         "required": true,
-        "format": "ipv4",
-        "description": "The alarm panel IP address (should be set as static)"
+        "anyOf": [
+            {
+                "format": "ipv4"
+            },
+            {
+                "format": "hostname"
+            }
+        ],
+        "description": "The alarm panel IP address or hostname (should be set as static)"
       },
       "displayBypassSwitches" : {
         "title": "Display zone bypass switches",

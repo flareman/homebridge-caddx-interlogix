@@ -47,7 +47,7 @@ export class NX595EPlatformSecurityAreaAccessory {
       this.chimeService.getCharacteristic(this.platform.Characteristic.On)!
         .onSet(this.setChimeState.bind(this));
 
-        this.platform.log.debug('Alarm system created: ', accessory.context.device.displayName);
+        this.platform.log.debug('Alarm system created:', accessory.context.device.displayName);
   }
 
   /**
@@ -88,23 +88,22 @@ export class NX595EPlatformSecurityAreaAccessory {
         return;
       }
     }
-    try {
-      this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank);
-      this.platform.log.debug('Set Alarm State Characteristic On ->', value);
-    } catch (error) {
-      this.platform.log.error((<Error>error).message);
-    }
-
+      this.securitySystem.sendAreaCommand(command, this.accessory.context.device.bank)
+        .then(() => {
+          this.platform.log.debug('Set Alarm State Characteristic On ->', value);
+        }).catch((error) => {
+          this.platform.log.error((<Error>error).message);
+        });
   }
 
   setChimeState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    try {
-      this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank);
+    this.securitySystem.sendAreaCommand(SecuritySystemAreaCommand.AREA_CHIME_TOGGLE, this.accessory.context.device.bank)
+    .then(() => {
       this.platform.log.debug('Set Chime Characteristic On ->', value);
-    } catch (error) {
+    }).catch((error) => {
       this.platform.log.error((<Error>error).message);
-    }
+    });
   }
 }
 
@@ -127,12 +126,12 @@ export class NX595EPlatformOutputAccessory {
   }
 
   setOutputState(value: CharacteristicValue) {
-    try {
-      this.platform.securitySystem!.sendOutputCommand(Boolean(value), this.accessory.context.device.bank);
+    this.platform.securitySystem!.sendOutputCommand(Boolean(value), this.accessory.context.device.bank)
+    .then(() => {
       this.platform.log.debug('Set Characteristic On ->', value);
-    } catch (error) {
+    }).catch((error) => {
       this.platform.log.error((<Error>error).message);
-    }
+    });
   }
 
   getOutputState() {
@@ -172,19 +171,12 @@ class NX595EPlatformSensorAccessory {
   setBypassState(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
 
-    // const isArmed = this.platform.securitySystem.getAreaArmStatus(this.accessory.context.device.associatedArea);
-    // if (isArmed) {
-    //   const error = new Error("Area is armed; cannot change bypass status")
-    //   this.platform.log.error(error.message);
-    //   return;
-    // }
-
-    try {
-      this.platform.securitySystem!.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank);
-      this.platform.log.debug('Set Characteristic On ->', value);
-    } catch (error) {
-      this.platform.log.error((<Error>error).message);
-    }
+    this.platform.securitySystem!.sendZoneCommand(SecuritySystemZoneCommand.ZONE_BYPASS, this.accessory.context.device.bank)
+      .then(() => {
+        this.platform.log.debug('Set Characteristic On ->', value);
+      }).catch((error) => {
+        this.platform.log.error((<Error>error).message);
+      });
   }
 }
 
@@ -202,7 +194,7 @@ export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAc
     this.service = this.accessory.getService(this.platform.Service.ContactSensor) || this.accessory.addService(this.platform.Service.ContactSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
 
-    this.platform.log.debug('Contact Sensor created: ', accessory.context.device.displayName);
+    this.platform.log.debug('Contact Sensor created:', accessory.context.device.displayName);
   }
 
 }
@@ -221,7 +213,7 @@ export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAcce
     this.service = this.accessory.getService(this.platform.Service.SmokeSensor) || this.accessory.addService(this.platform.Service.SmokeSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
 
-    this.platform.log.debug('Smoke Sensor created: ', accessory.context.device.displayName);
+    this.platform.log.debug('Smoke Sensor created:', accessory.context.device.displayName);
   }
 
 }
@@ -239,6 +231,6 @@ export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory 
 
     this.service = this.accessory.getService(this.platform.Service.MotionSensor) || this.accessory.addService(this.platform.Service.MotionSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
-    this.platform.log.debug('Radar created: ', accessory.context.device.displayName);
+    this.platform.log.debug('Radar created:', accessory.context.device.displayName);
   }
 }
