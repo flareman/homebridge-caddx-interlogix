@@ -82,27 +82,23 @@ export class NX595ESecuritySystem {
       const response = await this.makeRequest('login.cgi', payload, false);
       if (response == undefined) throw new Error("Login unsuccessful");
 
-      let correctLine: string = "";
-      const sessionIDLine: number = 28;
-      const vendorDetailsLine: number = 6;
       const data = response.data;
-      let lines1 = data.split("\n");
-      let lines2 = lines1;
-      let lines3 = lines1;
 
       // Login confirmed, parsing session ID
-      correctLine = lines2[sessionIDLine].trim();
-      this.sessionID = correctLine.substring(30, 46);
+      const session = data.match(/getSession\(\)\{return \"([A-Z0-9]*)\"/)?.[1];
+      this.sessionID = session;
+      this.log.debug("Session ID: ", this.sessionID);
 
       // Parsing panel vendor and software details
-      correctLine = lines3[vendorDetailsLine].trim();
-      const vendorDetails = correctLine.split(/[/_-]/);
-      switch (vendorDetails[2]) {
+      const vendor = data.match(/script src=\"\/([a-zA-Z0-9._-]+)\/.*\.js/)?.[1];
+      const vendorDetails = vendor.split(/[/_-]/);
+      switch (vendorDetails[1]) {
         case "CN": { this.vendor = Vendor.COMNAV; break; }
         default: { throw new Error("Unrecognized vendor"); }
       }
-      this.version = vendorDetails[3];
-      this.release = vendorDetails[4];
+      this.version = vendorDetails[2];
+      this.release = vendorDetails[3];
+      this.log.debug("Vendor Details: ", this.vendor, this.version, this.release);
 
       this.lastUpdate = new Date();
       this.log.debug('Logged in successfully.');

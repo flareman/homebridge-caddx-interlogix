@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.9] - 2021-11-27
+## [1.3.0] - 2023-04-22
+### Added
+- Some extra debug output was added.
+
+### Fixed
+- Plugin will now log in correctly for firmware versions from v_CN_0.109* and above, due to the changes described below.
+
+### Changed
+- Session ID recognition and network module details recognition have been converted to version-agnostic. Now the plugin should look out for "sessionID" and the vendor details by regex-searching, and not based on line/index lookup.
+
+
+## [1.2.9] - 2022-11-27
 ### Added
 - homebridge-caddx-interlogix is now officially part of the homebridge verified program :v: Thank you all for your support and help!
 - The plugin now accepts the module network address both as an IP address and as a hostname.
