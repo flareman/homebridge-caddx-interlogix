@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2023-04-24
+### Added
+- README.md was changed to include details about how upgraded firmware versions negate local network access, and what this means for our users.
+
+### Fixed
+- The output relay functionality which was broken since v1.2.9 has been restored.
+
+
 ## [1.3.0] - 2023-04-22
 ### Added
 - Some extra debug output was added.

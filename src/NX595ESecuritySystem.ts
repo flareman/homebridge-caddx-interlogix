@@ -682,7 +682,7 @@ export class NX595ESecuritySystem {
       // Prepare the payload according to details
       const payload = {
         'onum': output + 1,
-        'ostate': command
+        'ostate': (command)?1:0
       };
 
       // Finally make the request

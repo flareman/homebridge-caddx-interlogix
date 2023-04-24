@@ -19,6 +19,13 @@
 This is a Homebridge plugin for the [CaddX](https://caddx.gr/product/nx-595e/)/[Interlogic NetworX NX-595E](https://www.interlogix.com/intrusion/product/networx-ip-communication-module) and [Hills ComNav](https://www.hills.com.au/p/fire_security/alarms_intrusion/expansion_modules/Hills-Comnav/S2096A) network interface.
 
 
+## IMPORTANT: Local Network Access Lockout in Upgraded Firmware Versions
+
+Some users have pointed out a serious problem with the more recent versions of the module firmware. It appears that from some point onwards, the manufacturer decided to disable local network access, unless the alarm system is in programming mode. This effectively renders the plugin useless for all affected users, as local web access is necessary for it to work. Any upgraded modules can only be remotely accessed via the proprietary UltraConnect/UltraSync+ Android/iOS apps, who work via their own proxy servers and use SSL/TLS encryption to establish a connection back home. This, in conjunction with the fact that there is no evident way to downgrade an already upgraded NX-595E, means that all affected users are essentially locked out of using this plugin. Sorry guys, it's out of my hands. If you are unsure of whether this affects you, you don't lose anything by trying.
+
+TL;DL: don't upgrade your installations if you want to keep local network access, and it was nice knowing you if you already did :sad_face:
+
+
 ## Installation
 
 To install, make sure you have a valid Homebridge installation, then either find and install the plugin from the [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x) interface, or using a terminal prompt run:
