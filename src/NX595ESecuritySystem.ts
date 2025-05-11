@@ -34,7 +34,7 @@ export class NX595ESecuritySystem {
   protected zonesBank: number[][] = [];
   protected _zvbank: number[][] = [];
 
-  constructor(address: string, userid: string, pin: string, log: Logger, useHTTPS: Boolean = false) {
+  constructor(address: string, userid: string, pin: string, log: Logger, useHTTPS: boolean = false) {
     this.IPAddress = address;
     this.username = userid;
     this.passcode = pin;
@@ -322,7 +322,7 @@ export class NX595ESecuritySystem {
 
       // Get output values
       regexMatch = response.data.matchAll(/var\s+ostate\d+\s+=\s+\"([0,1]{1})\";/g);
-      let outputValues: Boolean[] = [];
+      let outputValues: boolean[] = [];
       for (const value of regexMatch) outputValues.push(+(value[1]) == 1);
 
       for (let i = 0; i < outputNames.length; i++) {
@@ -670,7 +670,7 @@ export class NX595ESecuritySystem {
     }
   }
 
-  async sendOutputCommand(command: Boolean, output: number) {
+  async sendOutputCommand(command: boolean, output: number) {
     try {
       if (this.sessionID === "") {
         await this.login();

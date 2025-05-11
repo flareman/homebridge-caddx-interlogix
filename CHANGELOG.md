@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2025-05-11
+### Fixed
+- Updated devDependencies with new ESlint, and moved the linter rules to the new eslint.config.mjs format, removing the old .eslintrc file.
+- Minor type refactoring across the codebase to achieve zero linter errors on build.
+- Updated tasks in package.json to a better stepwise structure.
+
+
 ## [1.3.2] - 2025-05-11
 ### Fixed
 - This plugin is now tested against and compatible with Homebridge 2.0, and its configuration now reflects that.

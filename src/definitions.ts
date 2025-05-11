@@ -46,7 +46,7 @@ export interface Zone {
 export interface Output {
   bank: number;
   name: string;
-  status: Boolean;
+  status: boolean;
 }
 
 export interface SequenceResponse {

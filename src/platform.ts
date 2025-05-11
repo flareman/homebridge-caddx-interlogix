@@ -22,10 +22,10 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
   private zoneDeltas: number[] = [];
   private radarPersistence: number = 60000;
   private smokePersistence: number = 60000;
-  private displayBypassSwitches: Boolean = false;
-  private displayOutputSwitches: Boolean = false;
-  private useHTTPS: Boolean = false;
-  private loggedIn: Boolean = false;
+  private displayBypassSwitches: boolean = false;
+  private displayOutputSwitches: boolean = false;
+  private useHTTPS: boolean = false;
+  private loggedIn: boolean = false;
 
   constructor(
     public readonly log: Logger,
@@ -36,8 +36,8 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     const pin = <string>this.config.pin;
     const ip = <string>this.config.ip;
     this.pollTimer = <number>this.config.pollTimer;
-    this.displayBypassSwitches = (this.config.displayBypassSwitches)? <Boolean>this.config.displayBypassSwitches: false;
-    this.displayOutputSwitches = (this.config.displayOutputSwitches)? <Boolean>this.config.displayOutputSwitches: false;
+    this.displayBypassSwitches = (this.config.displayBypassSwitches)? <boolean>this.config.displayBypassSwitches: false;
+    this.displayOutputSwitches = (this.config.displayOutputSwitches)? <boolean>this.config.displayOutputSwitches: false;
     this.radarPersistence = (this.config.radarPersistence)? <number>this.config.radarPersistence: 60000;
     this.smokePersistence = (this.config.smokePersistence)? <number>this.config.smokePersistence: 60000;
     this.securitySystem = new NX595ESecuritySystem(ip, username, pin, log, this.useHTTPS);
@@ -249,7 +249,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   discoverDevices() {
-    let devices: Object[];
+    let devices: object[];
     devices = [];
 
     if (this.securitySystem == undefined) return;
@@ -289,7 +289,7 @@ export class NX595EPlatform implements DynamicPlatformPlugin {
     // 1,2,8
     // 3-5
     // 1,4-6,8,11,23-28
-    let ignores: Boolean[] = new Array(this.securitySystem.getZones().length).fill(false);
+    let ignores: boolean[] = new Array(this.securitySystem.getZones().length).fill(false);
     const ignoreString: string = (this.config.ignoreZones) ? this.config.ignoreZones : undefined;
     if (ignoreString != undefined) {
       if ((new RegExp("^\\d{1,3}(?:-\\d{1,3})?(?:,\\d{1,3}(?:-\\d{1,3})?)*$")).test(ignoreString)) {

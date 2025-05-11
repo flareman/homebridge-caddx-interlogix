@@ -137,7 +137,7 @@ export class NX595EPlatformOutputAccessory {
   getOutputState() {
     // Get the output value and return it to Homebridge
 
-    const value: Boolean = this.platform.securitySystem!.getOutputState(this.accessory.context.device.bank);
+    const value: boolean = this.platform.securitySystem!.getOutputState(this.accessory.context.device.bank);
     this.platform.log.debug('Get Characteristic On ->', value);
 
     return (value == true? true: false);
@@ -150,7 +150,7 @@ class NX595EPlatformSensorAccessory {
   constructor(
     protected readonly platform: NX595EPlatform,
     protected readonly accessory: PlatformAccessory,
-    protected readonly displayBypassSwitches: Boolean
+    protected readonly displayBypassSwitches: boolean
   ) {
     this.bypassService = this.accessory.getService(this.platform.Service.Switch);
     if (displayBypassSwitches) {
@@ -183,7 +183,7 @@ class NX595EPlatformSensorAccessory {
 export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: boolean) {
     super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -202,7 +202,7 @@ export class NX595EPlatformContactSensorAccessory extends NX595EPlatformSensorAc
 export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: boolean) {
     super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -221,7 +221,7 @@ export class NX595EPlatformSmokeSensorAccessory extends NX595EPlatformSensorAcce
 export class NX595EPlatformRadarAccessory extends NX595EPlatformSensorAccessory {
   private service: Service;
 
-  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: Boolean) {
+  constructor(platform: NX595EPlatform, accessory: PlatformAccessory, displayBypassSwitches: boolean) {
     super(platform, accessory, displayBypassSwitches);
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
