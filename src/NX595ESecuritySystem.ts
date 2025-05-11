@@ -1,7 +1,7 @@
 import * as Utilities from './utility';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { Logger } from 'homebridge';
-import * as parser from 'fast-xml-parser';
+import { XMLParser } from 'fast-xml-parser';
 import { Mutex, MutexInterface } from 'async-mutex';
 import { Vendor, Area, Zone, Output, SequenceResponse, AreaBank, AreaState, ZoneState, SecuritySystemAreaCommand, SecuritySystemZoneCommand } from './definitions';
 export const retryDelayDuration: number = 3000;
@@ -504,7 +504,7 @@ export class NX595ESecuritySystem {
 
     try {
       const response = await this.makeRequest('user/seq.xml');
-      const json = parser.parse(response.data)['response'];
+      const json = new XMLParser().parse(response.data)['response'];
       const seqResponse: SequenceResponse = {
         areas: typeof(json['areas']) == 'number'? [json['areas']]: json['areas'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number),
         zones: typeof(json['zones']) == 'number'? [json['zones']]: json['zones'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number)
@@ -552,7 +552,7 @@ export class NX595ESecuritySystem {
     // Fetch zone update
     try {
       const response = await this.makeRequest('user/zstate.xml', {'state': bank});
-      const json = parser.parse(response.data)['response'];
+      const json = new XMLParser().parse(response.data)['response'];
       const zdat = typeof(json['zdat']) == 'number'? [json['zdat']]: json['zdat'].split(',').filter((x: string) => x.trim().length && !isNaN(parseInt(x))).map(Number);
       this.zonesBank[bank] = zdat;
     } catch (error) { throw(error); }
@@ -567,7 +567,7 @@ export class NX595ESecuritySystem {
     // Fetch zone update
     try {
       const response = await this.makeRequest('user/outstat.xml');
-      const json = parser.parse(response.data)['response'];
+      const json = new XMLParser().parse(response.data)['response'];
       const values = Object.values(json);
       for (let i: number = 0; i < this.outputs.length; i++) {
         this.outputs[i].status = (values[i] == 0)?false:true;
@@ -584,7 +584,7 @@ export class NX595ESecuritySystem {
     // Fetch area update
     try {
       const response = await this.makeRequest('user/status.xml', {'arsel': bank});
-      const json = parser.parse(response.data)['response'];
+      const json = new XMLParser().parse(response.data)['response'];
       if (json.hasOwnProperty('sysflt')) this.__extra_area_status = json['sysflt'].split('\n');
       else this.__extra_area_status = [];
       this.areas[bank].bank_state.length = 0;

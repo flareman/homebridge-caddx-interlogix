@@ -141,3 +141,5 @@ accessories
 accessories/*
 .vscode
 .vscode/*
+
+npm-shrinkwrap.json

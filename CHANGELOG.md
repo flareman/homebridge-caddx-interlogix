@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2025-05-11
+### Fixed
+- This plugin is now tested against and compatible with Homebridge 2.0, and its configuration now reflects that.
+- The name in the default schema configuration now does not carry a hyphen, so as to avoid warnings in the Homebridge logs pertaining to the platform's Name characteristic.
+- The engine requirements for homebridge and node have been updated.
+- The fast-xml-parser package dependency has been updated to patch a critical vulnerability (CVE-2024-41818)
+
+
 ## [1.3.1] - 2023-04-24
 ### Added
 - README.md was changed to include details about how upgraded firmware versions negate local network access, and what this means for our users.

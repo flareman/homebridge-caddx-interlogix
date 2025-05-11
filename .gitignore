@@ -130,3 +130,5 @@ accessories/*
 
 .DS_Store
 .idea
+
+npm-shrinkwrap.json

@@ -1,7 +1,7 @@
 {
   "displayName": "CaddX/NetworX Homebridge Plugin",
   "name": "homebridge-caddx-interlogix",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "A homebridge plugin for integrating the ComNav/NetworX/CaddX NX-595E network module with HomeKit",
   "author": "Spyros Smparounis <nflare@gmail.com> (https://github.com/flareman)",
   "license": "Apache-2.0",
@@ -25,7 +25,7 @@
   "homepage": "https://github.com/flareman/homebridge-caddx-interlogix",
   "engines": {
     "node": "^14.20.1 || >=16.16.0",
-    "homebridge": ">=1.0.0"
+    "homebridge": "^1.6.0 || ^2.0.0-beta.0"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -34,7 +34,7 @@
     "watch": "npm run build && npm link && nodemon",
     "prepublishOnly": "npm run lint && npm run build",
     "buildlink": "npm run build && npm link",
-    "buildpack": "npm run build && npm link && npm shrinkwrap && npm pack"
+    "buildpack": "npm run lint && npm run build && npm pack"
   },
   "keywords": [
     "homebridge-plugin",
@@ -50,19 +50,23 @@
     "security-system"
   ],
   "devDependencies": {
-    "@types/node": "^14.18.31",
-    "@typescript-eslint/eslint-plugin": "^4.6.1",
-    "@typescript-eslint/parser": "^4.6.1",
-    "eslint": "^7.13.0",
-    "homebridge": "^1.1.7",
-    "nodemon": "^2.0.6",
-    "rimraf": "^3.0.2",
+    "@types/node": "^22.15.17",
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "axios": "^1.9.0",
+    "eslint": "^9.26.0",
+    "homebridge": "^1.9.0",
+    "nodemon": "^3.1.10",
+    "rimraf": "^6.0.1",
     "ts-node": "^9.0.0",
-    "typescript": "^4.0.5"
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "homebridge": "^1.9.0 || ^2.0.0-beta.0"
   },
   "dependencies": {
-    "async-mutex": "^0.4.0",
-    "axios": "^1.1.2",
-    "fast-xml-parser": "^3.17.6"
+    "async-mutex": "^0.5.0",
+    "axios": "^1.9.0",
+    "fast-xml-parser": "^4.4.1"
   }
 }

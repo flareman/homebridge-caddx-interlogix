@@ -11,7 +11,7 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "NX-595E Security System Platform",
+        "default": "NX595E Security System Platform",
         "description": "Name of the security platform"
       },
       "username" : {
